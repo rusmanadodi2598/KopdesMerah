@@ -80,6 +80,8 @@ node --test "tests/**/*.test.js"
 
 ## Teknologi
 
+[![Stack](https://skillicons.dev/icons?i=js,html,css,nodejs,threejs,git,github)](https://skillicons.dev)
+
 - three.js 0.160.0 (disertakan lokal di `vendor/`, tanpa CDN)
 - Vanilla JS + ES modules, tanpa build step
 - Target 30 fps di HP menengah
