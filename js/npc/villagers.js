@@ -1,4 +1,4 @@
-import * as THREE from '../../vendor/three.module.js';
+import { bangunTubuh } from '../player/rig.js';
 
 // Brain NPC murni (tanpa three.js) + villagerMesh() terpisah untuk visual.
 // State: wander → toShop → queue → buying → leave → wander
@@ -108,21 +108,12 @@ export function disperseQueue(villagers) {
 
 // Visual low-poly, terpisah dari brain.
 export function villagerMesh(warnaBaju = 0xc25e5e) {
-  const g = new THREE.Group();
-  const std = (warna, rough = 0.85) =>
-    new THREE.MeshStandardMaterial({ color: warna, roughness: rough, metalness: 0 });
-  const badan = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.3, 0.65, 4, 10),
-    std(warnaBaju),
-  );
-  badan.position.y = 0.8;
-  g.add(badan);
-  const kepala = new THREE.Mesh(
-    new THREE.SphereGeometry(0.24, 12, 10),
-    std(0xf2c89b, 0.7),
-  );
-  kepala.position.y = 1.52;
-  g.add(kepala);
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; } });
-  return g;
+  const { group, ayun } = bangunTubuh({ baju: warnaBaju, kepalaR: 0.24 });
+  group.userData.ayun = ayun;
+  return group;
+}
+
+// Ayunan jalan warga; bergerak=true saat state berpindah (wander/toShop/leave).
+export function ayunVillager(group, dt, bergerak) {
+  group.userData.ayun?.(dt, bergerak, 0.8);
 }

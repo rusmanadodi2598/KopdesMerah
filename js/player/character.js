@@ -1,5 +1,6 @@
 import * as THREE from '../../vendor/three.module.js';
 import { resolveCircle } from '../world/collision.js';
+import { bangunTubuh } from './rig.js';
 
 const JALAN = 4; // m/s
 const LARI = 7; // m/s (tahan Shift)
@@ -8,30 +9,18 @@ const RADIUS = 0.4;
 const _targetKamera = new THREE.Vector3();
 
 function bangunMesh() {
-  const g = new THREE.Group();
-  const std = (warna, rough = 0.85) =>
-    new THREE.MeshStandardMaterial({ color: warna, roughness: rough, metalness: 0 });
-  const badan = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.32, 0.7, 4, 10),
-    std(0x2b6cb0),
-  );
-  badan.position.y = 0.85;
-  g.add(badan);
-  const kepala = new THREE.Mesh(
-    new THREE.SphereGeometry(0.26, 12, 10),
-    std(0xf2c89b, 0.7),
-  );
-  kepala.position.y = 1.62;
-  g.add(kepala);
-  // Topi merah khas Kopdes
-  const topi = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.28, 0.16, 12), std(0xc8102e, 0.8));
+  const { group, rig, ayun } = bangunTubuh({ baju: 0x2b6cb0 });
+  // Topi merah khas Kopdes (ikut rig agar bergoyang saat jalan)
+  const std = (warna) => new THREE.MeshStandardMaterial({ color: warna, roughness: 0.8, metalness: 0 });
+  const topi = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.28, 0.16, 12), std(0xc8102e));
   topi.position.y = 1.82;
-  g.add(topi);
-  const lidah = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.04, 12, 1, false, 0, Math.PI), std(0xc8102e, 0.8));
+  topi.castShadow = true;
+  rig.add(topi);
+  const lidah = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.04, 12, 1, false, 0, Math.PI), std(0xc8102e));
   lidah.position.set(0, 1.76, 0.14);
-  g.add(lidah);
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; } });
-  return g;
+  rig.add(lidah);
+  group.userData.ayun = ayun;
+  return group;
 }
 
 export function createPlayer() {
@@ -64,6 +53,9 @@ export function createPlayer() {
       const p = resolveCircle(pos, RADIUS, colliders);
       pos.x = p.x;
       pos.z = p.z;
+      group.userData.ayun(dt, true, lari ? 1.45 : 1);
+    } else {
+      group.userData.ayun(dt, false);
     }
     group.position.set(pos.x, 0, pos.z);
   }

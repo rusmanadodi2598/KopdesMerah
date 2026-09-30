@@ -4,7 +4,7 @@ import { createInput } from './core/input.js';
 import { buildVillage } from './world/village.js';
 import { buildKopdes } from './world/kopdes.js';
 import { createPlayer, updateCamera } from './player/character.js';
-import { createVillager, stepVillager, disperseQueue, villagerMesh } from './npc/villagers.js';
+import { createVillager, stepVillager, disperseQueue, villagerMesh, ayunVillager } from './npc/villagers.js';
 import { createStock, ITEMS, nilaiModal } from './shop/stock.js';
 import { createCashier } from './shop/cashier.js';
 import { createDay } from './shop/day.js';
@@ -367,6 +367,7 @@ const loop = createLoop({
       const sebelum = v.state;
       stepVillager(v, dt, ctx);
       v.group.position.set(v.pos.x, 0, v.pos.z);
+      ayunVillager(v.group, dt, v.state === 'wander' || v.state === 'toShop' || v.state === 'leave');
       if (sebelum === 'buying' && v.state === 'leave') jualKe();
     }
     serveTarget = null;

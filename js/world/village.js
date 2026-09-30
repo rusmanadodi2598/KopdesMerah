@@ -33,6 +33,8 @@ export function buildVillage(scene) {
   };
   const diLuarZona = (x, z, zona) =>
     !zona.some((zn) => (x - zn.x) ** 2 + (z - zn.z) ** 2 < zn.r ** 2);
+  const dummy = new THREE.Object3D();
+  const tmpWarna = new THREE.Color();
 
   // Tanah & cahaya langit
   const tanah = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), std(0x79c74f));
@@ -103,8 +105,57 @@ export function buildVillage(scene) {
     }
     kotak(1.1, 2, 0.15, 0x5b3a1e, r.x, r.z + 2.05, 1); // pintu
     kotak(1.6, 0.25, 0.9, 0xd9cfc0, r.x, r.z + 2.5, 0.12); // anak tangga
+    // Cerobong asap di atap
+    const cerobong = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.4, 0.5), std(0x8a7f70));
+    cerobong.position.set(r.x + 1.5, 4.7, r.z - 0.8);
+    tambah(cerobong, true);
     collider(r.x, r.z, 5, 4);
   }
+
+  // Asap cerobong: sprite lembut yang naik, membesar, memudar (butuh DOM).
+  const asap = [];
+  if (typeof document !== 'undefined') {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g2 = c.getContext('2d');
+    const grad = g2.createRadialGradient(32, 32, 4, 32, 32, 30);
+    grad.addColorStop(0, 'rgba(245,245,245,0.9)');
+    grad.addColorStop(1, 'rgba(245,245,245,0)');
+    g2.fillStyle = grad;
+    g2.fillRect(0, 0, 64, 64);
+    const texAsap = new THREE.CanvasTexture(c);
+    for (const r of RUMAH) {
+      for (let i = 0; i < 5; i++) {
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: texAsap, transparent: true, opacity: 0.3, depthWrite: false,
+        }));
+        s.userData = { cx: r.x + 1.5, cy: 5.4, cz: r.z - 0.8, t: Math.random() };
+        tambah(s);
+        asap.push(s);
+      }
+    }
+  }
+
+  // Daun berguguran: instanced, melayang turun + bergoyang.
+  const N_DAUN = 36;
+  const daunJatuh = new THREE.InstancedMesh(
+    new THREE.PlaneGeometry(0.24, 0.24),
+    new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0, side: THREE.DoubleSide }),
+    N_DAUN,
+  );
+  const dataDaun = [];
+  for (let i = 0; i < N_DAUN; i++) {
+    dataDaun.push({
+      x: (Math.random() * 2 - 1) * 45,
+      y: Math.random() * 7,
+      z: (Math.random() * 2 - 1) * 40,
+      vy: 0.45 + Math.random() * 0.5,
+      f: Math.random() * 6.28,
+    });
+    daunJatuh.setColorAt(i, tmpWarna.setHSL(0.12 + Math.random() * 0.13, 0.6, 0.45));
+  }
+  daunJatuh.instanceColor.needsUpdate = true;
+  tambah(daunJatuh);
 
   // Sawah: petak-petak hijau
   for (let i = 0; i < 4; i++) {
@@ -158,8 +209,6 @@ export function buildVillage(scene) {
   };
 
   // Pohon: InstancedMesh (batang + daun) — murah untuk HP; variasi warna daun.
-  const dummy = new THREE.Object3D();
-  const tmpWarna = new THREE.Color();
   const posisiPohon = acakBebas(44);
   const batang = new THREE.InstancedMesh(
     new THREE.CylinderGeometry(0.18, 0.25, 1.6, 6), std(0x6b4a2f), posisiPohon.length);
@@ -264,12 +313,41 @@ export function buildVillage(scene) {
     balaiDesa: { x: 26, z: -19 },
   };
 
-  // Tick animasi desa (awan melayang). Dipanggil dari loop utama.
+  // Tick animasi desa (awan melayang, asap cerobong, daun gugur).
+  // Dipanggil dari loop utama.
   function tick(dt) {
     for (const a of awan) {
       a.g.position.x += a.v * dt;
       if (a.g.position.x > 95) a.g.position.x = -95;
     }
+    for (const s of asap) {
+      const u = s.userData;
+      u.t += dt * 0.22;
+      if (u.t > 1) u.t = 0;
+      s.position.set(
+        u.cx + Math.sin(u.t * 5) * 0.4 + u.t * 1.4,
+        u.cy + u.t * 3.4,
+        u.cz + Math.cos(u.t * 4) * 0.3,
+      );
+      const sk = 0.7 + u.t * 2;
+      s.scale.set(sk, sk, 1);
+      s.material.opacity = 0.3 * (1 - u.t);
+    }
+    dataDaun.forEach((d, i) => {
+      d.y -= d.vy * dt;
+      d.f += dt * 1.6;
+      if (d.y < 0.15) {
+        d.y = 5 + Math.random() * 3;
+        d.x = (Math.random() * 2 - 1) * 45;
+        d.z = (Math.random() * 2 - 1) * 40;
+      }
+      dummy.position.set(d.x + Math.sin(d.f) * 0.9, d.y, d.z);
+      dummy.rotation.set(d.f * 0.7, d.f, 0);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      daunJatuh.setMatrixAt(i, dummy.matrix);
+    });
+    daunJatuh.instanceMatrix.needsUpdate = true;
   }
 
   return { colliders, spots, kopdes, tick };
