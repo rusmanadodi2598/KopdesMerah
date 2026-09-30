@@ -6,6 +6,12 @@ Kopdes dari warung kecil sampai koperasi besar.
 
 Repo: https://github.com/rusmanadodi2598/KopdesMerah
 
+## Tampilan
+
+| Desa & HUD | Papan Misi | Toko Buka |
+|---|---|---|
+| ![Desa](docs/screenshots/desa.png) | ![Papan Misi](docs/screenshots/papan-misi.png) | ![Toko Buka](docs/screenshots/toko-buka.png) |
+
 ## Fitur
 
 - Desa 3D siang yang cozy: rumah warga, sawah, balai desa, papan misi, gudang
