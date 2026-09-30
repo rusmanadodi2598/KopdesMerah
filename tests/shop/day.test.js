@@ -41,3 +41,19 @@ test('laporan memuat kepuasan', () => {
   const lap = d.close();
   assert.ok(lap.kepuasan >= 0 && lap.kepuasan <= 100);
 });
+
+test('close saat fase pagi: no-op, hari tidak maju', () => {
+  const d = createDay();
+  const lap = d.close();
+  assert.equal(lap, null);
+  assert.equal(d.hari, 1);
+  assert.equal(d.fase, 'pagi');
+});
+
+test('recordSale saat toko belum buka: diabaikan', () => {
+  const d = createDay();
+  const ok = d.recordSale(5000, 3000);
+  assert.equal(ok, false);
+  assert.equal(d.omzet, 0);
+  assert.equal(d.pembeli, 0);
+});

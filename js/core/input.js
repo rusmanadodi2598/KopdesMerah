@@ -58,6 +58,7 @@ export function createInput() {
     el.addEventListener('touchcancel', onTouchEnd, { passive: true });
   }
 
+  // Lepas listener; harus elemen yang sama dengan yang dipasang attach().
   function detach(el) {
     el.removeEventListener('keydown', handleKeyDown);
     el.removeEventListener('keyup', handleKeyUp);

@@ -61,3 +61,21 @@ test('disperseQueue: toShop/queue/buying bubar jadi leave', () => {
   assert.equal(a.queueSlot, null);
   assert.equal(b.queueSlot, null);
 });
+
+test('slot antre dibebaskan setelah buying, bisa dipakai ulang', () => {
+  const spots = [{ x: 2, z: 0 }];
+  const a = createVillager('a', [{ x: 0, z: 0 }, { x: 30, z: 0 }], { shopper: true });
+  const villagers = [a];
+  const ctx = { shopOpen: true, queueSpots: spots, villagers };
+  stepVillager(a, 0.1, ctx);
+  for (let i = 0; i < 20 && a.state !== 'queue'; i++) stepVillager(a, 0.5, ctx);
+  stepVillager(a, 0.1, { ...ctx, serveId: 'a' });
+  stepVillager(a, 2.1, { ...ctx, serveId: 'a' });
+  assert.equal(a.state, 'leave');
+  assert.equal(a.queueSlot, null);
+  const b = createVillager('b', [{ x: 0, z: 0 }], { shopper: true });
+  villagers.push(b);
+  stepVillager(b, 0.1, { ...ctx, villagers });
+  assert.equal(b.state, 'toShop');
+  assert.equal(b.queueSlot, 0); // slot yang sama dipakai ulang
+});

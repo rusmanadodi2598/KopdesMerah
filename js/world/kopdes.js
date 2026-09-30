@@ -104,5 +104,9 @@ export function buildKopdes(level) {
   kasir.position.set(w / 4, 0.5, d / 2 + 1.2);
   g.add(kasir);
 
+  // Ukuran tapak untuk collider: wiring membaca ini agar collider selalu
+  // sinkron dengan level gedung (jangan hard-code ukuran di village.js).
+  g.userData.ukuran = { w, d };
+
   return g;
 }

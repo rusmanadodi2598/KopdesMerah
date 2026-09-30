@@ -2,6 +2,10 @@
 // Alur: accept(id) di papan → kerjakan (progress untuk misi aksi / bawa
 // barang untuk misi antar) → complete(id, inventory) untuk misi antar,
 // progress() otomatis menyelesaikan misi aksi saat target tercapai.
+//
+// Misi bisa diulang tiap hari: wiring memanggil resetHarian() saat hari
+// berganti. totalSelesai bersifat kumulatif lintas hari dan dipakai
+// wiring untuk cek achievement 'misi-10'.
 export const MISSIONS = [
   { id: 'antar-beras', judul: 'Antar beras ke rumah Bu RT', butuh: { beras: 1 }, tujuan: 'rumah-burt', upah: 15000, reputasi: 10 },
   { id: 'panen-singkong', judul: 'Bantu panen singkong Pak Kades', aksi: 'panen', target: 3, tujuan: 'sawah', upah: 20000, reputasi: 15 },
@@ -16,10 +20,25 @@ export function createBoard() {
     status[m.id] = { diterima: false, selesai: false, progres: 0 };
   }
   const cari = (id) => MISSIONS.find((m) => m.id === id);
+  let totalSelesai = 0;
+
+  const tandaiSelesai = (st) => {
+    st.selesai = true;
+    totalSelesai += 1;
+  };
 
   return {
     get daftar() {
       return MISSIONS.map((m) => ({ ...m, ...status[m.id] }));
+    },
+    get totalSelesai() {
+      return totalSelesai;
+    },
+    // Reset harian: semua misi tersedia lagi. totalSelesai tidak ikut reset.
+    resetHarian() {
+      for (const m of MISSIONS) {
+        status[m.id] = { diterima: false, selesai: false, progres: 0 };
+      }
     },
     accept(id) {
       const st = status[id];
@@ -36,7 +55,7 @@ export function createBoard() {
         st.progres += 1;
       }
       if (st.progres >= m.target) {
-        st.selesai = true;
+        tandaiSelesai(st);
         return { selesai: true, upah: m.upah, reputasi: m.reputasi };
       }
       return { selesai: false, upah: 0, reputasi: 0 };
@@ -50,17 +69,18 @@ export function createBoard() {
       if (!st.diterima) return { ok: false, pesan: 'Ambil misi di papan dulu.' };
       if (m.aksi) {
         if (st.progres >= m.target) {
-          st.selesai = true;
+          tandaiSelesai(st);
           return { ok: true, pesan: 'Misi selesai!', upah: m.upah, reputasi: m.reputasi };
         }
         return { ok: false, pesan: `Kurang ${m.target - st.progres} lagi.` };
       }
+      if (!inventory) return { ok: false, pesan: 'Tas tidak tersedia.' };
       const kurang = Object.entries(m.butuh).filter(([bid, n]) => !inventory.has(bid, n));
       if (kurang.length > 0) {
         return { ok: false, pesan: `Butuh ${kurang.map(([bid, n]) => `${n} ${bid}`).join(', ')} di tas.` };
       }
       for (const [bid, n] of Object.entries(m.butuh)) inventory.take(bid, n);
-      st.selesai = true;
+      tandaiSelesai(st);
       return { ok: true, pesan: 'Misi selesai!', upah: m.upah, reputasi: m.reputasi };
     },
   };
@@ -78,6 +98,7 @@ export function createAchievements() {
       return ACHIEVEMENTS.map((d) => ({ id: d.id, nama: d.nama, terbuka: terbuka.has(d.id) }));
     },
     // event: { misiSelesai, hariBuka } → return id achievement yang baru terbuka.
+    // Untuk misi-10, wiring mengisi misiSelesai dengan board.totalSelesai.
     buka(event) {
       const baru = [];
       for (const d of ACHIEVEMENTS) {

@@ -1,5 +1,8 @@
 // Collision 2D (x,z) murni — tanpa dependensi three.js agar bisa diuji di node.
 // AABB = { minX, maxX, minZ, maxZ }
+// Batasan: resolusi single-pass per box; di klaster collider yang rapat,
+// dorongan dari satu box bisa memasukkan lingkaran ke box lain. Cukup
+// untuk MVP (collider desa jarang berimpit).
 export function resolveCircle(pos, radius, boxes) {
   let x = pos.x;
   let z = pos.z;

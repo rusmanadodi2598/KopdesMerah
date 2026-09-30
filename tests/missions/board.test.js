@@ -59,3 +59,43 @@ test('achievement 7 hari buka berturut-turut', () => {
   const a = createAchievements();
   assert.deepEqual(a.buka({ misiSelesai: 0, hariBuka: 7 }), ['buka-7']);
 });
+
+test('resetHarian: misi bisa diulang, totalSelesai kumulatif', () => {
+  const board = createBoard();
+  const inv = createInventory();
+  board.accept('antar-beras');
+  inv.add('beras', 1);
+  assert.equal(board.complete('antar-beras', inv).ok, true);
+  assert.equal(board.totalSelesai, 1);
+  board.resetHarian();
+  assert.equal(board.totalSelesai, 1); // kumulatif, tidak ikut reset
+  const st = board.daftar.find((m) => m.id === 'antar-beras');
+  assert.equal(st.selesai, false);
+  assert.equal(st.diterima, false);
+  board.accept('antar-beras');
+  inv.add('beras', 1);
+  assert.equal(board.complete('antar-beras', inv).ok, true);
+  assert.equal(board.totalSelesai, 2);
+});
+
+test('progress auto-selesai lalu complete(): tidak reward ganda', () => {
+  const board = createBoard();
+  board.accept('tagih-iuran');
+  board.progress('tagih-iuran', { kunjungan: true });
+  board.progress('tagih-iuran', { kunjungan: true });
+  const done = board.progress('tagih-iuran', { kunjungan: true });
+  assert.equal(done.selesai, true);
+  assert.equal(board.totalSelesai, 1);
+  const inv = createInventory();
+  const r = board.complete('tagih-iuran', inv);
+  assert.equal(r.ok, false);
+  assert.equal(board.totalSelesai, 1); // tidak naik lagi
+});
+
+test('complete tanpa inventory tidak crash', () => {
+  const board = createBoard();
+  board.accept('antar-beras');
+  const r = board.complete('antar-beras', undefined);
+  assert.equal(r.ok, false);
+  assert.ok(r.pesan.length > 0);
+});

@@ -53,20 +53,20 @@ export function buildVillage(scene) {
 
   // Gapura di kedua ujung jalan
   for (const gx of [-38, 38]) {
-    const p1 = kotak(0.8, 5, 0.8, 0x8b5a2b, gx - 2.5, 8);
-    const p2 = kotak(0.8, 5, 0.8, 0x8b5a2b, gx + 2.5, 8);
-    const balok = kotak(6.4, 1, 1, 0xc8102e, gx, 8, 5.2);
+    kotak(0.8, 5, 0.8, 0x8b5a2b, gx - 2.5, 8);
+    kotak(0.8, 5, 0.8, 0x8b5a2b, gx + 2.5, 8);
+    kotak(6.4, 1, 1, 0xc8102e, gx, 8, 5.2);
     tambah(banner('SELAMAT DATANG DI DESA MAJU', 5.6, gx, 4.4, 8.55));
     collider(gx - 2.5, 8, 0.8, 0.8);
     collider(gx + 2.5, 8, 0.8, 0.8);
-    void p1; void p2; void balok;
   }
 
-  // Gedung Kopdes (level 1) — markas
+  // Gedung Kopdes (level 1) — markas. Collider diambil dari ukuran gedung
+  // agar sinkron saat Task 11 menukar gedung naik level.
   const kopdes = buildKopdes(1);
   kopdes.position.set(0, 0, -2);
   tambah(kopdes);
-  collider(0, -2, 6, 5);
+  collider(0, -2, kopdes.userData.ukuran.w, kopdes.userData.ukuran.d);
 
   // Gudang di belakang kopdes
   kotak(3, 2.5, 3, 0x9c7a4d, -8, -8);
@@ -75,8 +75,7 @@ export function buildVillage(scene) {
   // Papan misi di depan kopdes
   kotak(0.25, 1.6, 0.25, 0x6b4a2f, 4.4, 3);
   kotak(0.25, 1.6, 0.25, 0x6b4a2f, 5.6, 3);
-  const papan = kotak(1.8, 1.1, 0.12, 0x8b5a2b, 5, 3, 1.5);
-  void papan;
+  kotak(1.8, 1.1, 0.12, 0x8b5a2b, 5, 3, 1.5);
 
   // Rumah warga
   for (const r of RUMAH) {

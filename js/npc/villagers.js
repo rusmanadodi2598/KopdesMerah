@@ -68,6 +68,9 @@ export function stepVillager(v, dt, ctx) {
       break;
     }
     case 'queue': {
+      // Wiring (Task 11) melayani antrean dengan mengisi ctx.serveId = id
+      // villager yang sedang dilayani. (Plan menyebut onArrive; kontrak
+      // aktual modul ini adalah serveId.)
       if (ctx.serveId === v.id) {
         v.state = 'buying';
         v.timer = 2;

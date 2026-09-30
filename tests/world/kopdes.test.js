@@ -21,3 +21,9 @@ test('semua level mengembalikan Group', () => {
     assert.ok(buildKopdes(lv) instanceof THREE.Group, `level ${lv}`);
   }
 });
+
+test('buildKopdes mengekspos ukuran untuk collider', () => {
+  assert.deepEqual(buildKopdes(1).userData.ukuran, { w: 6, d: 5 });
+  assert.deepEqual(buildKopdes(2).userData.ukuran, { w: 10, d: 8 });
+  assert.deepEqual(buildKopdes(3).userData.ukuran, { w: 10, d: 8 });
+});
