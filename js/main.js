@@ -12,6 +12,7 @@ import { MISSIONS, createBoard, createAchievements } from './missions/board.js';
 import { createInventory } from './player/inventory.js';
 import { levelUntuk, barangTerbuka, reputasiKepuasan } from './progression/levels.js';
 import { defaultState, saveGame, loadGame, hasSave } from './save/save.js';
+import { sinkronState } from './save/sync.js';
 import { mountHUD, mountSentuh, tampilDialogMisi, tampilLaporan, formatRupiah } from './ui/hud.js';
 
 // ================= State =================
@@ -36,6 +37,7 @@ let txCounter = 0;
 let serveTarget = null;
 
 function simpan() {
+  sinkronState(S, day); // C1/I1: hari & fase ikut tersimpan, HUD selalu benar
   S.stock = { ...stock.qty };
   S.inventory = { ...inventory.isi };
   saveGame(S);
@@ -129,7 +131,7 @@ function beriReputasi(n) {
 }
 
 function cekAchievement() {
-  const baru = ach.buka({ misiSelesai: S.misiSelesai.length, hariBuka: S.streakBuka });
+  const baru = ach.buka({ misiSelesai: board.totalSelesai, hariBuka: S.streakBuka });
   for (const id of baru) {
     S.achievement.push(id);
     notif(`Achievement terbuka: ${id}`);
@@ -301,8 +303,12 @@ mountHUD(document.getElementById('hud'), () => S, {
     else notif('Belum ada laporan hari ini.');
   },
 });
-mountSentuh(document.getElementById('sentuh'), input, () => interaksi());
+mountSentuh(document.getElementById('sentuh'), input, () => {
+  if (!overlay.hidden) return; // M4: jangan aksi di balik dialog
+  interaksi();
+});
 window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyE' && !overlay.hidden) return;
   if (e.code === 'KeyE') interaksi();
 });
 window.addEventListener('beforeunload', () => simpan());

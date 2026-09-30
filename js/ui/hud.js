@@ -102,8 +102,16 @@ export function mountSentuh(sentuhEl, input, onAksi) {
   };
   zona.addEventListener('touchend', lepas);
   zona.addEventListener('touchcancel', lepas);
-  btnAksi.addEventListener('touchstart', (e) => { onAksi?.(); e.preventDefault(); }, { passive: false });
-  btnAksi.addEventListener('click', () => onAksi?.());
+  // Guard double-fire: di HP, touchstart diikuti click sintetis ~300ms.
+  let aksiTerakhir = 0;
+  btnAksi.addEventListener('touchstart', (e) => {
+    aksiTerakhir = Date.now();
+    onAksi?.();
+    e.preventDefault();
+  }, { passive: false });
+  btnAksi.addEventListener('click', () => {
+    if (Date.now() - aksiTerakhir > 500) onAksi?.();
+  });
 }
 
 // Dialog daftar misi (overlay). onAccept(id) dipanggil saat tombol Ambil diklik.
