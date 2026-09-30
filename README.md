@@ -31,6 +31,16 @@ npx serve .
 
 Lalu buka http://localhost:8000 di browser.
 
+## Perintah Cepat (Makefile)
+
+```bash
+make setup   # instalasi awal: aktifkan hook keamanan, cek dependensi
+make serve   # jalankan game di http://localhost:8000
+make test    # jalankan seluruh unit test
+make check   # test + pindai secret (gitleaks)
+make help    # daftar semua perintah
+```
+
 ## Kontrol
 
 | Aksi | PC | HP |
@@ -85,3 +95,9 @@ pemeriksaan secret:
 
 Bila gitleaks belum terinstal, hook memberi peringatan dan melewati pemeriksaan
 (set `GITLEAKS_BIN` ke lokasi binary gitleaks bila bukan di path default).
+
+## Dokumen Lain
+
+- [CHANGELOG.md](CHANGELOG.md) — riwayat perubahan (pra-rilis)
+- [CONTRIBUTING.md](CONTRIBUTING.md) — panduan kontribusi
+- [LICENSE](LICENSE) — Lisensi MIT
