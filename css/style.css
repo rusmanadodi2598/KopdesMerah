@@ -2,7 +2,47 @@
 html, body { width: 100%; height: 100%; overflow: hidden; background: #87b5e0;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
 #app, #app canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-#hud { position: fixed; top: 12px; left: 12px; display: flex; gap: 8px; z-index: 10;
-  pointer-events: none; }
-#hud span { background: rgba(0,0,0,.55); color: #fff; padding: 6px 12px;
+
+/* HUD: bar status + tombol aksi */
+#hud { position: fixed; top: 12px; left: 12px; right: 12px; z-index: 10;
+  pointer-events: none; display: flex; flex-direction: column; gap: 8px;
+  align-items: flex-start; }
+.hud-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+.hud-bar span { background: rgba(0,0,0,.55); color: #fff; padding: 6px 12px;
   border-radius: 999px; font-size: 14px; font-weight: 600; }
+.hud-tombol { display: flex; gap: 8px; pointer-events: auto; }
+.hud-tombol button, .panel button { background: #c8102e; color: #fff; border: 0;
+  border-radius: 10px; padding: 10px 16px; font-size: 15px; font-weight: 700;
+  cursor: pointer; }
+.hud-tombol button:active, .panel button:active { transform: scale(.96); }
+
+/* Kontrol sentuh HP: hanya tampil di layar sentuh */
+#sentuh { display: none; }
+@media (pointer: coarse) {
+  #sentuh { display: block; position: fixed; inset: auto 0 0 0; z-index: 10;
+    pointer-events: none; }
+  #joystick { position: absolute; left: 20px; bottom: 24px; width: 120px; height: 120px;
+    border-radius: 50%; background: rgba(0,0,0,.25); pointer-events: auto;
+    display: flex; align-items: center; justify-content: center; }
+  #stick { width: 52px; height: 52px; border-radius: 50%;
+    background: rgba(255,255,255,.75); }
+  #btn-aksi { position: absolute; right: 24px; bottom: 44px; width: 84px; height: 84px;
+    border-radius: 50%; border: 0; background: #c8102e; color: #fff;
+    font-size: 16px; font-weight: 800; pointer-events: auto; }
+}
+
+/* Overlay: dialog misi & laporan harian */
+#overlay { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center; padding: 16px; }
+#overlay[hidden] { display: none; }
+.panel { background: #fffdf5; border-radius: 14px; padding: 20px; width: 100%;
+  max-width: 420px; max-height: 80vh; overflow-y: auto; }
+.panel h2 { margin-bottom: 12px; font-size: 20px; }
+.panel .misi { display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; padding: 10px 0; border-bottom: 1px solid #e5dcc3; }
+.panel .misi em { color: #2e7d32; font-style: normal; font-weight: 700; }
+.panel dl > div { display: flex; justify-content: space-between; padding: 6px 0;
+  border-bottom: 1px solid #eee; }
+.panel dl dt { color: #555; }
+.panel dl dd { font-weight: 700; }
+.panel > button { margin-top: 14px; width: 100%; }

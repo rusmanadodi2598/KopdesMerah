@@ -12,9 +12,16 @@
 <body>
   <div id="app"></div>
   <div id="hud">
-    <span id="hud-hari">Hari 1</span>
-    <span id="hud-uang">Rp0</span>
+    <div class="hud-bar">
+      <span id="hud-hari">Hari 1</span>
+      <span id="hud-uang">Rp50.000</span>
+    </div>
   </div>
+  <div id="sentuh">
+    <div id="joystick"><div id="stick"></div></div>
+    <button id="btn-aksi" type="button">AKSI</button>
+  </div>
+  <div id="overlay" hidden></div>
   <script type="module" src="./js/main.js"></script>
 </body>
 </html>
