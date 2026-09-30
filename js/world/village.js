@@ -22,8 +22,8 @@ export function buildVillage(scene) {
     m.position.set(x, y, z);
     return tambah(m);
   };
-  const collider = (x, z, w, d) => {
-    colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
+  const collider = (x, z, w, d, tag) => {
+    colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, tag });
   };
 
   // Tanah & langit
@@ -66,7 +66,7 @@ export function buildVillage(scene) {
   const kopdes = buildKopdes(1);
   kopdes.position.set(0, 0, -2);
   tambah(kopdes);
-  collider(0, -2, kopdes.userData.ukuran.w, kopdes.userData.ukuran.d);
+  collider(0, -2, kopdes.userData.ukuran.w, kopdes.userData.ukuran.d, 'kopdes');
 
   // Gudang di belakang kopdes
   kotak(3, 2.5, 3, 0x9c7a4d, -8, -8);
@@ -164,7 +164,7 @@ export function buildVillage(scene) {
     sawah: { x: -28, z: -24 },
     balaiDesa: { x: 26, z: -19 },
   };
-  return { colliders, spots };
+  return { colliders, spots, kopdes };
 }
 
 // Banner teks via CanvasTexture (butuh DOM; di node kembalikan mesh polos).

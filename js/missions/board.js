@@ -14,13 +14,13 @@ export const MISSIONS = [
   { id: 'antar-kopi', judul: 'Antar kopi ke Balai Desa', butuh: { kopi: 2 }, tujuan: 'balaiDesa', upah: 20000, reputasi: 10 },
 ];
 
-export function createBoard() {
+export function createBoard(totalAwal = 0) {
   const status = {};
   for (const m of MISSIONS) {
     status[m.id] = { diterima: false, selesai: false, progres: 0 };
   }
   const cari = (id) => MISSIONS.find((m) => m.id === id);
-  let totalSelesai = 0;
+  let totalSelesai = totalAwal;
 
   const tandaiSelesai = (st) => {
     st.selesai = true;
@@ -99,6 +99,10 @@ export function createAchievements() {
     },
     // event: { misiSelesai, hariBuka } → return id achievement yang baru terbuka.
     // Untuk misi-10, wiring mengisi misiSelesai dengan board.totalSelesai.
+    // pulihkan(ids): kembalikan status terbuka dari save (tanpa memicu baru).
+    pulihkan(ids) {
+      for (const id of ids ?? []) terbuka.add(id);
+    },
     buka(event) {
       const baru = [];
       for (const d of ACHIEVEMENTS) {

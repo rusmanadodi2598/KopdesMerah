@@ -99,3 +99,15 @@ test('complete tanpa inventory tidak crash', () => {
   assert.equal(r.ok, false);
   assert.ok(r.pesan.length > 0);
 });
+
+test('createBoard(totalAwal): totalSelesai awal dari save', () => {
+  const board = createBoard(7);
+  assert.equal(board.totalSelesai, 7);
+});
+
+test('achievements pulihkan dari save tanpa double-buka', () => {
+  const a = createAchievements();
+  a.pulihkan(['misi-10']);
+  assert.equal(a.daftar.find((d) => d.id === 'misi-10').terbuka, true);
+  assert.deepEqual(a.buka({ misiSelesai: 10, hariBuka: 0 }), []);
+});

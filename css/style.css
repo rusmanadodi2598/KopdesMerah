@@ -46,3 +46,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #87b5e0;
 .panel dl dt { color: #555; }
 .panel dl dd { font-weight: 700; }
 .panel > button { margin-top: 14px; width: 100%; }
+
+/* Notifikasi toast */
+#notif { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%) translateY(20px);
+  background: rgba(0,0,0,.8); color: #fff; padding: 10px 18px; border-radius: 999px;
+  font-size: 14px; font-weight: 600; z-index: 30; opacity: 0; pointer-events: none;
+  transition: opacity .25s, transform .25s; max-width: 90vw; text-align: center; }
+#notif.tampil { opacity: 1; transform: translateX(-50%) translateY(0); }
