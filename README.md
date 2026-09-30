@@ -80,7 +80,12 @@ node --test "tests/**/*.test.js"
 
 ## Teknologi
 
-[![Stack](https://skillicons.dev/icons?i=js,html,css,nodejs,threejs,git,github)](https://skillicons.dev)
+![JavaScript](https://img.shields.io/badge/JavaScript-ES2022-F7DF1E?style=flat-square&logo=javascript&logoColor=white)
+![three.js](https://img.shields.io/badge/three.js-0.160-000000?style=flat-square&logo=threedotjs&logoColor=white)
+![HTML](https://img.shields.io/badge/HTML-5-E34F26?style=flat-square&logo=html5&logoColor=white)
+![CSS](https://img.shields.io/badge/CSS-3-1572B6?style=flat-square&logo=css&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-24-339933?style=flat-square&logo=nodedotjs&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-2EA44F?style=flat-square)
 
 - three.js 0.160.0 (disertakan lokal di `vendor/`, tanpa CDN)
 - Vanilla JS + ES modules, tanpa build step
