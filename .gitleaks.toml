@@ -1,0 +1,6 @@
+# Konfigurasi gitleaks untuk KopdesMerah.
+# Memakai seluruh rule bawaan gitleaks (222 rule default).
+# Catatan: allowlist "paths" wajib double-quoted string, bukan '''...'''.
+
+[extend]
+useDefault = true

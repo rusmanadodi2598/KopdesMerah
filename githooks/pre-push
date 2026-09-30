@@ -1,0 +1,14 @@
+#!/bin/sh
+# Pre-push hook KopdesMerah: pindai seluruh riwayat git sebelum push.
+# Mengandalkan exit code gitleaks (1 = leak ditemukan), bukan parsing output.
+set -u
+
+GITLEAKS_BIN="${GITLEAKS_BIN:-$HOME/workspace/tools/bin/gitleaks}"
+
+if [ ! -x "$GITLEAKS_BIN" ]; then
+  echo "peringatan: gitleaks tidak ditemukan di $GITLEAKS_BIN - pemeriksaan secret dilewati" >&2
+  echo "instal gitleaks atau set GITLEAKS_BIN ke lokasinya" >&2
+  exit 0
+fi
+
+"$GITLEAKS_BIN" detect --verbose --redact --config .gitleaks.toml
