@@ -46,10 +46,10 @@ export function mountHUD(hudEl, getState, aksi = {}) {
 
   function render() {
     const m = hudModel(getState());
-    elHari.textContent = `Hari ${m.hari}`;
-    elUang.textContent = m.uang;
-    elRep.textContent = `★ ${m.reputasi}`;
-    elLevel.textContent = `Lv ${m.level}`;
+    elHari.textContent = `📅 Hari ${m.hari}`;
+    elUang.textContent = `💰 ${m.uang}`;
+    elRep.textContent = `⭐ ${m.reputasi}`;
+    elLevel.textContent = `🏪 Lv ${m.level}`;
     btnToko.textContent = m.fase === 'buka' ? 'Tutup Toko' : 'Buka Toko';
   }
 
@@ -114,18 +114,30 @@ export function mountSentuh(sentuhEl, input, onAksi) {
   });
 }
 
+// Ikon tile per misi dari kata kunci judul (murni, bisa diuji).
+export function ikonMisi(judul = '') {
+  const j = judul.toLowerCase();
+  if (j.includes('beras') || j.includes('panen') || j.includes('singkong')) return '🌾';
+  if (j.includes('iuran') || j.includes('rumah')) return '🏠';
+  if (j.includes('stok') || j.includes('rak') || j.includes('gula')) return '📦';
+  if (j.includes('kopi') || j.includes('balai')) return '☕';
+  return '🎯';
+}
+
 // Dialog daftar misi (overlay). onAccept(id) dipanggil saat tombol Ambil diklik.
 export function tampilDialogMisi(overlayEl, daftar, onAccept) {
   const kartu = daftar.map((m) => {
-    const status = m.selesai ? '<em>Selesai</em>'
-      : m.diterima ? '<em>Diterima</em>'
+    const status = m.selesai ? '<span class="lencana lencana-hijau">Selesai</span>'
+      : m.diterima ? '<span class="lencana lencana-kuning">Diterima</span>'
       : `<button type="button" data-ambil="${m.id}">Ambil</button>`;
     const syarat = m.butuh
       ? `Butuh: ${Object.entries(m.butuh).map(([b, n]) => `${n} ${b}`).join(', ')}`
       : `Aksi: ${m.aksi} ${m.target}x`;
-    return `<div class="misi"><div><strong>${m.judul}</strong><br><small>${syarat} · Upah ${formatRupiah(m.upah)}</small></div>${status}</div>`;
+    return `<div class="misi"><div class="misi-ikon">${ikonMisi(m.judul)}</div>`
+      + `<div class="misi-teks"><strong>${m.judul}</strong>`
+      + `<small>${syarat} · Upah ${formatRupiah(m.upah)}</small></div>${status}</div>`;
   }).join('');
-  overlayEl.innerHTML = `<div class="panel"><h2>Papan Misi</h2>${kartu}<button type="button" data-tutup>Tutup</button></div>`;
+  overlayEl.innerHTML = `<div class="panel"><h2>📋 Papan Misi</h2>${kartu}<button type="button" data-tutup>Tutup</button></div>`;
   overlayEl.hidden = false;
   overlayEl.querySelectorAll('[data-ambil]').forEach((b) =>
     b.addEventListener('click', () => { onAccept?.(b.dataset.ambil); }));
@@ -134,7 +146,7 @@ export function tampilDialogMisi(overlayEl, daftar, onAccept) {
 
 // Panel laporan harian (overlay). onTutup dipanggil setelah tombol ditekan.
 export function tampilLaporan(overlayEl, laporan, onTutup) {
-  overlayEl.innerHTML = `<div class="panel"><h2>Laporan Hari ${laporan.hari}</h2>
+  overlayEl.innerHTML = `<div class="panel"><h2>🧾 Laporan Hari ${laporan.hari}</h2>
     <dl>
       <div><dt>Omzet</dt><dd>${formatRupiah(laporan.omzet)}</dd></div>
       <div><dt>Laba</dt><dd>${formatRupiah(laporan.laba)}</dd></div>

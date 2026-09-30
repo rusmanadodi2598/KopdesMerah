@@ -8,9 +8,9 @@ Repo: https://github.com/rusmanadodi2598/KopdesMerah
 
 ## Tampilan
 
-| Desa & HUD | Papan Misi | Toko Buka |
-|---|---|---|
-| ![Desa](docs/screenshots/desa.png) | ![Papan Misi](docs/screenshots/papan-misi.png) | ![Toko Buka](docs/screenshots/toko-buka.png) |
+| Desa & HUD | Papan Misi | Toko Buka | Mobile |
+|---|---|---|---|
+| ![Desa](docs/screenshots/desa.png) | ![Papan Misi](docs/screenshots/papan-misi.png) | ![Toko Buka](docs/screenshots/toko-buka.png) | ![Mobile](docs/screenshots/mobile.png) |
 
 ## Fitur
 
