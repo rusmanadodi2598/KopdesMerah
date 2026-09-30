@@ -101,3 +101,7 @@ Bila gitleaks belum terinstal, hook memberi peringatan dan melewati pemeriksaan
 - [CHANGELOG.md](CHANGELOG.md) — riwayat perubahan (pra-rilis)
 - [CONTRIBUTING.md](CONTRIBUTING.md) — panduan kontribusi
 - [LICENSE](LICENSE) — Lisensi MIT
+
+## Pengembang
+
+[Dodi Rusmana](https://github.com/rusmanadodi2598/rusmanadodi2598)
