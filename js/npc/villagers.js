@@ -109,17 +109,20 @@ export function disperseQueue(villagers) {
 // Visual low-poly, terpisah dari brain.
 export function villagerMesh(warnaBaju = 0xc25e5e) {
   const g = new THREE.Group();
+  const std = (warna, rough = 0.85) =>
+    new THREE.MeshStandardMaterial({ color: warna, roughness: rough, metalness: 0 });
   const badan = new THREE.Mesh(
     new THREE.CapsuleGeometry(0.3, 0.65, 4, 10),
-    new THREE.MeshLambertMaterial({ color: warnaBaju }),
+    std(warnaBaju),
   );
   badan.position.y = 0.8;
   g.add(badan);
   const kepala = new THREE.Mesh(
     new THREE.SphereGeometry(0.24, 12, 10),
-    new THREE.MeshLambertMaterial({ color: 0xf2c89b }),
+    std(0xf2c89b, 0.7),
   );
   kepala.position.y = 1.52;
   g.add(kepala);
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; } });
   return g;
 }

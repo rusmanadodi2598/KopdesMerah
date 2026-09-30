@@ -58,15 +58,51 @@ const overlay = document.getElementById('overlay');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
 app.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87b5e0);
+
+// Kubah langit gradien (siang cerah) + fog tipis untuk kedalaman.
+scene.fog = new THREE.Fog(0xd8ecf9, 60, 170);
+{
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: {
+      atas: { value: new THREE.Color(0x2f7fc4) },
+      bawah: { value: new THREE.Color(0xd8ecf9) },
+    },
+    vertexShader: 'varying vec3 vP; void main() { vP = position;'
+      + ' gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform vec3 atas; uniform vec3 bawah; varying vec3 vP;'
+      + ' void main() { float t = clamp(normalize(vP).y * 0.5 + 0.5, 0.0, 1.0);'
+      + ' gl_FragColor = vec4(mix(bawah, atas, pow(t, 0.75)), 1.0); }',
+  });
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(230, 24, 16), skyMat));
+}
+
+// Matahari hangat + bayangan lembut.
+const sun = new THREE.DirectionalLight(0xfff1d6, 2.4);
+sun.position.set(34, 44, 20);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -55;
+sun.shadow.camera.right = 55;
+sun.shadow.camera.top = 55;
+sun.shadow.camera.bottom = -55;
+sun.shadow.camera.near = 5;
+sun.shadow.camera.far = 130;
+sun.shadow.bias = -0.0006;
+scene.add(sun);
+scene.add(sun.target);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
 camera.position.set(2, 3.5, 14);
 
-const { colliders, spots, kopdes: kopdesAwal } = buildVillage(scene);
+const { colliders, spots, kopdes: kopdesAwal, tick: tickDesa } = buildVillage(scene);
 let kopdesGroup = kopdesAwal;
 
 // Naik level: tukar gedung + sinkronkan collider (I2).
@@ -74,6 +110,7 @@ function tukarGedung(level) {
   scene.remove(kopdesGroup);
   kopdesGroup = buildKopdes(level);
   kopdesGroup.position.set(0, 0, -2);
+  kopdesGroup.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   scene.add(kopdesGroup);
   const uk = kopdesGroup.userData.ukuran;
   const c = colliders.find((k) => k.tag === 'kopdes');
@@ -333,6 +370,7 @@ const loop = createLoop({
       if (sebelum === 'buying' && v.state === 'leave') jualKe();
     }
     serveTarget = null;
+    tickDesa?.(dt);
   },
   render() { renderer.render(scene, camera); },
 });

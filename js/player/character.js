@@ -9,18 +9,28 @@ const _targetKamera = new THREE.Vector3();
 
 function bangunMesh() {
   const g = new THREE.Group();
+  const std = (warna, rough = 0.85) =>
+    new THREE.MeshStandardMaterial({ color: warna, roughness: rough, metalness: 0 });
   const badan = new THREE.Mesh(
     new THREE.CapsuleGeometry(0.32, 0.7, 4, 10),
-    new THREE.MeshLambertMaterial({ color: 0x2b6cb0 }),
+    std(0x2b6cb0),
   );
   badan.position.y = 0.85;
   g.add(badan);
   const kepala = new THREE.Mesh(
     new THREE.SphereGeometry(0.26, 12, 10),
-    new THREE.MeshLambertMaterial({ color: 0xf2c89b }),
+    std(0xf2c89b, 0.7),
   );
   kepala.position.y = 1.62;
   g.add(kepala);
+  // Topi merah khas Kopdes
+  const topi = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.28, 0.16, 12), std(0xc8102e, 0.8));
+  topi.position.y = 1.82;
+  g.add(topi);
+  const lidah = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.04, 12, 1, false, 0, Math.PI), std(0xc8102e, 0.8));
+  lidah.position.set(0, 1.76, 0.14);
+  g.add(lidah);
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; } });
   return g;
 }
 

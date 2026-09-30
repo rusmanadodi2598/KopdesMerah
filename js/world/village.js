@@ -2,6 +2,7 @@ import * as THREE from '../../vendor/three.module.js';
 import { buildKopdes } from './kopdes.js';
 
 // Desa kecil: siang cerah, cozy. Satuan meter; +x ke kanan, +z ke selatan (ke viewer).
+// Material standar + bayangan lembut + detail (rumput, bunga, lampu, awan).
 export function buildVillage(scene) {
   const colliders = [];
   const RUMAH = [
@@ -13,42 +14,44 @@ export function buildVillage(scene) {
     { id: 'rumah-w4', nama: 'Warga 4', x: 30, z: 16, warna: 0xd9c2f0 },
   ];
 
-  const tambah = (mesh) => { scene.add(mesh); return mesh; };
-  const kotak = (w, h, d, warna, x, z, y = h / 2) => {
-    const m = new THREE.Mesh(
-      new THREE.BoxGeometry(w, h, d),
-      new THREE.MeshLambertMaterial({ color: warna }),
-    );
+  // Material standar: respons cahaya matahari + bayangan lebih hidup.
+  const std = (warna, rough = 0.92) =>
+    new THREE.MeshStandardMaterial({ color: warna, roughness: rough, metalness: 0 });
+
+  const tambah = (mesh, bayang = false) => {
+    if (bayang) { mesh.castShadow = true; mesh.receiveShadow = true; }
+    scene.add(mesh);
+    return mesh;
+  };
+  const kotak = (w, h, d, warna, x, z, y = h / 2, bayang = true) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), std(warna));
     m.position.set(x, y, z);
-    return tambah(m);
+    return tambah(m, bayang);
   };
   const collider = (x, z, w, d, tag) => {
     colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, tag });
   };
+  const diLuarZona = (x, z, zona) =>
+    !zona.some((zn) => (x - zn.x) ** 2 + (z - zn.z) ** 2 < zn.r ** 2);
 
-  // Tanah & langit
-  const tanah = new THREE.Mesh(
-    new THREE.PlaneGeometry(140, 140),
-    new THREE.MeshLambertMaterial({ color: 0x7ec850 }),
-  );
+  // Tanah & cahaya langit
+  const tanah = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), std(0x79c74f));
   tanah.rotation.x = -Math.PI / 2;
+  tanah.receiveShadow = true;
   tambah(tanah);
-  tambah(new THREE.HemisphereLight(0xbfd9ff, 0x6a8f5f, 1.0));
+  const hemi = new THREE.HemisphereLight(0xcfe4ff, 0x6a8f5f, 0.85);
+  tambah(hemi);
 
   // Jalan utama (sumbu x, z=8) + setapak ke kopdes
-  const jalan = new THREE.Mesh(
-    new THREE.PlaneGeometry(88, 4),
-    new THREE.MeshLambertMaterial({ color: 0xb08d5f }),
-  );
+  const jalan = new THREE.Mesh(new THREE.PlaneGeometry(88, 4), std(0xb08d5f, 1));
   jalan.rotation.x = -Math.PI / 2;
   jalan.position.set(0, 0.02, 8);
+  jalan.receiveShadow = true;
   tambah(jalan);
-  const setapak = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.5, 7),
-    new THREE.MeshLambertMaterial({ color: 0xb08d5f }),
-  );
+  const setapak = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 7), std(0xbfa06e, 1));
   setapak.rotation.x = -Math.PI / 2;
   setapak.position.set(0, 0.02, 4.5);
+  setapak.receiveShadow = true;
   tambah(setapak);
 
   // Gapura di kedua ujung jalan
@@ -65,6 +68,7 @@ export function buildVillage(scene) {
   // agar sinkron saat Task 11 menukar gedung naik level.
   const kopdes = buildKopdes(1);
   kopdes.position.set(0, 0, -2);
+  kopdes.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   tambah(kopdes);
   collider(0, -2, kopdes.userData.ukuran.w, kopdes.userData.ukuran.d, 'kopdes');
 
@@ -77,18 +81,28 @@ export function buildVillage(scene) {
   kotak(0.25, 1.6, 0.25, 0x6b4a2f, 5.6, 3);
   kotak(1.8, 1.1, 0.12, 0x8b5a2b, 5, 3, 1.5);
 
-  // Rumah warga
+  // Rumah warga: badan + atap + bingkai jendela + pintu + anak tangga
   for (const r of RUMAH) {
     kotak(5, 3.5, 4, r.warna, r.x, r.z);
-    const atap = new THREE.Mesh(
-      new THREE.ConeGeometry(4.1, 1.8, 4),
-      new THREE.MeshLambertMaterial({ color: 0xa33b2e }),
-    );
+    const atap = new THREE.Mesh(new THREE.ConeGeometry(4.1, 1.8, 4), std(0xa33b2e));
     atap.rotation.y = Math.PI / 4;
     atap.position.set(r.x, 3.5 + 0.9, r.z);
     atap.scale.set(1, 1, 0.82);
-    tambah(atap);
-    kotak(1.1, 2, 0.15, 0x5b3a1e, r.x, r.z + 2.05, 1);
+    tambah(atap, true);
+    // Bingkai jendela putih + kaca
+    for (const jx of [-1.5, 1.5]) {
+      const bingkai = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.3, 0.1), std(0xffffff, 0.7));
+      bingkai.position.set(r.x + jx, 2.1, r.z + 2.02);
+      tambah(bingkai);
+      const kaca = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1, 0.12),
+        new THREE.MeshStandardMaterial({ color: 0x9fc5e8, roughness: 0.25, metalness: 0.1 }),
+      );
+      kaca.position.set(r.x + jx, 2.1, r.z + 2.04);
+      tambah(kaca);
+    }
+    kotak(1.1, 2, 0.15, 0x5b3a1e, r.x, r.z + 2.05, 1); // pintu
+    kotak(1.6, 0.25, 0.9, 0xd9cfc0, r.x, r.z + 2.5, 0.12); // anak tangga
     collider(r.x, r.z, 5, 4);
   }
 
@@ -101,54 +115,139 @@ export function buildVillage(scene) {
 
   // Balai desa
   kotak(8, 4, 6, 0xe8dcc0, 26, -24);
-  const atapBalai = new THREE.Mesh(
-    new THREE.ConeGeometry(6.2, 2.2, 4),
-    new THREE.MeshLambertMaterial({ color: 0x8b2f24 }),
-  );
+  const atapBalai = new THREE.Mesh(new THREE.ConeGeometry(6.2, 2.2, 4), std(0x8b2f24));
   atapBalai.rotation.y = Math.PI / 4;
   atapBalai.position.set(26, 5.1, -24);
   atapBalai.scale.set(1, 1, 0.78);
-  tambah(atapBalai);
+  tambah(atapBalai, true);
   tambah(banner('BALAI DESA', 5, 26, 3.2, -20.9));
   collider(26, -24, 8, 6);
 
-  // Pohon: InstancedMesh (batang + daun) — murah untuk HP
+  // Lampu jalan di sepanjang jalan utama
+  for (const lx of [-24, -8, 8, 24]) {
+    const tiang = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 3.4, 8), std(0x3f4753, 0.6));
+    tiang.position.set(lx, 1.7, 5.2);
+    tambah(tiang, true);
+    const kepala = new THREE.Mesh(
+      new THREE.SphereGeometry(0.28, 10, 8),
+      new THREE.MeshStandardMaterial({
+        color: 0xfff3c4, emissive: 0xffe9a8, emissiveIntensity: 0.45, roughness: 0.4,
+      }),
+    );
+    kepala.position.set(lx, 3.55, 5.2);
+    tambah(kepala);
+  }
+
+  // Zona larangan untuk vegetasi acak
   const zonaLarangan = [
     { x: 0, z: -2, r: 8 }, { x: -8, z: -8, r: 4 }, { x: 5, z: 3, r: 3 },
     { x: -28, z: -28, r: 10 }, { x: 26, z: -24, r: 9 },
     ...RUMAH.map((r) => ({ x: r.x, z: r.z, r: 6 })),
   ];
-  const posisiPohon = [];
-  let guard = 0;
-  while (posisiPohon.length < 44 && guard++ < 2000) {
-    const x = (Math.random() * 2 - 1) * 52;
-    const z = (Math.random() * 2 - 1) * 46;
-    if (Math.abs(z - 8) < 4 && Math.abs(x) < 46) continue; // jalan
-    if (zonaLarangan.some((zn) => (x - zn.x) ** 2 + (z - zn.z) ** 2 < zn.r ** 2)) continue;
-    posisiPohon.push({ x, z, s: 0.8 + Math.random() * 0.6 });
-  }
+  const acakBebas = (n, y0 = 0) => {
+    const hasil = [];
+    let guard = 0;
+    while (hasil.length < n && guard++ < 3000) {
+      const x = (Math.random() * 2 - 1) * 52;
+      const z = (Math.random() * 2 - 1) * 46;
+      if (Math.abs(z - 8) < 4.5 && Math.abs(x) < 46) continue; // jalan
+      if (!diLuarZona(x, z, zonaLarangan)) continue;
+      hasil.push({ x, z, s: 0.7 + Math.random() * 0.7 });
+    }
+    return hasil;
+  };
+
+  // Pohon: InstancedMesh (batang + daun) — murah untuk HP; variasi warna daun.
   const dummy = new THREE.Object3D();
+  const tmpWarna = new THREE.Color();
+  const posisiPohon = acakBebas(44);
   const batang = new THREE.InstancedMesh(
-    new THREE.CylinderGeometry(0.18, 0.25, 1.6, 6),
-    new THREE.MeshLambertMaterial({ color: 0x6b4a2f }),
-    posisiPohon.length,
-  );
+    new THREE.CylinderGeometry(0.18, 0.25, 1.6, 6), std(0x6b4a2f), posisiPohon.length);
   const daun = new THREE.InstancedMesh(
-    new THREE.ConeGeometry(1.3, 2.6, 7),
-    new THREE.MeshLambertMaterial({ color: 0x3f8f3a }),
-    posisiPohon.length,
-  );
+    new THREE.ConeGeometry(1.3, 2.6, 7), std(0x3f8f3a), posisiPohon.length);
   posisiPohon.forEach((p, i) => {
     dummy.position.set(p.x, 0.8 * p.s, p.z);
     dummy.scale.setScalar(p.s);
+    dummy.rotation.y = Math.random() * Math.PI;
     dummy.updateMatrix();
     batang.setMatrixAt(i, dummy.matrix);
     dummy.position.set(p.x, (1.6 + 1.1) * p.s, p.z);
     dummy.updateMatrix();
     daun.setMatrixAt(i, dummy.matrix);
+    tmpWarna.setHSL(0.29 + Math.random() * 0.05, 0.55, 0.32 + Math.random() * 0.12);
+    daun.setColorAt(i, tmpWarna);
   });
+  daun.instanceColor.needsUpdate = true;
+  batang.castShadow = true;
+  daun.castShadow = true;
   tambah(batang);
   tambah(daun);
+
+  // Rumput liar: cone kecil instanced
+  const rumput = new THREE.InstancedMesh(
+    new THREE.ConeGeometry(0.09, 0.38, 5), std(0x8bd95e), 150);
+  acakBebas(150).forEach((p, i) => {
+    dummy.position.set(p.x, 0.16 * p.s, p.z);
+    dummy.scale.setScalar(p.s);
+    dummy.rotation.y = Math.random() * Math.PI;
+    dummy.updateMatrix();
+    rumput.setMatrixAt(i, dummy.matrix);
+  });
+  tambah(rumput);
+
+  // Bunga: bola kecil warna-warni instanced
+  const bunga = new THREE.InstancedMesh(
+    new THREE.IcosahedronGeometry(0.11, 0),
+    new THREE.MeshStandardMaterial({ roughness: 0.8 }), 60);
+  const WARNA_BUNGA = [0xff8fb3, 0xffd166, 0xffffff, 0xff6b6b];
+  acakBebas(60).forEach((p, i) => {
+    dummy.position.set(p.x, 0.28 * p.s, p.z);
+    dummy.scale.setScalar(p.s);
+    dummy.rotation.set(0, 0, 0);
+    dummy.updateMatrix();
+    bunga.setMatrixAt(i, dummy.matrix);
+    bunga.setColorAt(i, tmpWarna.set(WARNA_BUNGA[i % WARNA_BUNGA.length]));
+  });
+  bunga.instanceColor.needsUpdate = true;
+  tambah(bunga);
+
+  // Batu hias
+  for (let i = 0; i < 9; i++) {
+    const p = acakBebas(1)[0];
+    if (!p) continue;
+    const batu = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35 * p.s, 0), std(0x9aa3ab, 1));
+    batu.position.set(p.x, 0.2 * p.s, p.z);
+    batu.rotation.set(Math.random() * 3, Math.random() * 3, 0);
+    tambah(batu, true);
+  }
+
+  // Bedeng bunga di depan tiap rumah
+  for (const r of RUMAH) {
+    for (let i = 0; i < 5; i++) {
+      const bed = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 0),
+        std(WARNA_BUNGA[(i + Math.abs(Math.round(r.x))) % WARNA_BUNGA.length], 0.8));
+      bed.position.set(r.x - 2 + i, 0.3, r.z + 3.4);
+      tambah(bed);
+    }
+  }
+
+  // Awan: gumpalan bola pipih, melayang pelan.
+  const awan = [];
+  const matAwan = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0 });
+  for (let i = 0; i < 6; i++) {
+    const g = new THREE.Group();
+    const n = 3 + Math.floor(Math.random() * 3);
+    for (let j = 0; j < n; j++) {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(1.6 + Math.random() * 1.4, 10, 8), matAwan);
+      s.position.set(j * 2.2 - n, Math.random() * 0.8, Math.random() * 1.2 - 0.6);
+      s.scale.y = 0.55;
+      g.add(s);
+    }
+    g.position.set((Math.random() * 2 - 1) * 70, 12 + Math.random() * 4, (Math.random() * 2 - 1) * 60 - 10);
+    g.scale.setScalar(1.9);
+    tambah(g);
+    awan.push({ g, v: 0.35 + Math.random() * 0.35 });
+  }
 
   const spots = {
     toko: {
@@ -164,7 +263,16 @@ export function buildVillage(scene) {
     sawah: { x: -28, z: -24 },
     balaiDesa: { x: 26, z: -19 },
   };
-  return { colliders, spots, kopdes };
+
+  // Tick animasi desa (awan melayang). Dipanggil dari loop utama.
+  function tick(dt) {
+    for (const a of awan) {
+      a.g.position.x += a.v * dt;
+      if (a.g.position.x > 95) a.g.position.x = -95;
+    }
+  }
+
+  return { colliders, spots, kopdes, tick };
 }
 
 // Banner teks via CanvasTexture (butuh DOM; di node kembalikan mesh polos).
