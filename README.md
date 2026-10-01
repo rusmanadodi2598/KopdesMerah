@@ -20,6 +20,10 @@ Repo: https://github.com/rusmanadodi2598/KopdesMerah
 |---|
 | ![Karakter](docs/screenshots/karakter.png) |
 
+| Malam: Dialog | Malam: Lentera | Malam: Lampu Padam |
+|---|---|---|
+| ![Malam Dialog](docs/screenshots/malam-dialog.png) | ![Malam](docs/screenshots/malam.png) | ![Lampu Padam](docs/screenshots/malam-lampu-padam.png) |
+
 ## Fitur
 
 - Desa 3D siang yang cozy: rumah warga, sawah, balai desa, papan misi, gudang

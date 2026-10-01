@@ -40,6 +40,9 @@ const POLA = {
   gagal: () => nada(220, 120, 0.25, 'sawtooth', 0.12),
   buka: () => nada(320, 640, 0.18, 'sine', 0.15),
   tutup: () => nada(640, 320, 0.18, 'sine', 0.15),
+  lentera: () => { nada(180, 520, 0.3, 'sine', 0.12); nada(520, 760, 0.25, 'sine', 0.1, 0.12); },
+  padam: () => nada(400, 90, 0.4, 'sine', 0.14),
+  klikLampu: () => nada(1200, 900, 0.05, 'square', 0.07),
 };
 
 export function bunyi(nama) {

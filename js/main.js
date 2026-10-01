@@ -20,6 +20,8 @@ import {
 } from './ui/layar.js';
 import { bunyi, toggleBisu, apakahBisu } from './core/suara.js';
 import { tingkatBerikutnya, bacaKualitas, terapkanKualitas } from './core/kualitas.js';
+import { createMalam, terapkanFaseMalam, tickVisualMalam, FASE } from './core/malam.js';
+import { createDialog, renderDialog } from './ui/dialog.js';
 
 // Kualitas grafis dibaca awal karena dipakai saat membangun dunia.
 let kualitas = bacaKualitas();
@@ -79,13 +81,14 @@ const scene = new THREE.Scene();
 
 // Kubah langit gradien (siang cerah) + fog tipis untuk kedalaman.
 scene.fog = new THREE.Fog(0xd8ecf9, 60, 170);
+const skyU = {
+  atas: { value: new THREE.Color(0x2f7fc4) },
+  bawah: { value: new THREE.Color(0xd8ecf9) },
+};
 {
   const skyMat = new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: {
-      atas: { value: new THREE.Color(0x2f7fc4) },
-      bawah: { value: new THREE.Color(0xd8ecf9) },
-    },
+    uniforms: skyU,
     vertexShader: 'varying vec3 vP; void main() { vP = position;'
       + ' gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: 'uniform vec3 atas; uniform vec3 bawah; varying vec3 vP;'
@@ -113,7 +116,7 @@ scene.add(sun.target);
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
 camera.position.set(2, 3.5, 14);
 
-const { colliders, spots, kopdes: kopdesAwal, tick: tickDesa, efek } = buildVillage(scene);
+const { colliders, spots, kopdes: kopdesAwal, tick: tickDesa, lampuJalan, efek } = buildVillage(scene);
 terapkanKualitas({ renderer, scene, efek }, kualitas);
 let kopdesGroup = kopdesAwal;
 
@@ -138,6 +141,41 @@ scene.add(player.group);
 
 const input = createInput();
 input.attach(window);
+
+// ================= Malam: bulan, cahaya lampu jalan, lentera Raka =================
+const bulan = new THREE.DirectionalLight(0x8fb4ff, 0);
+bulan.position.set(-20, 30, -10);
+scene.add(bulan);
+
+const lampu3D = lampuJalan.map((l) => {
+  const cahaya = new THREE.PointLight(0xffd9a0, 1.4, 13, 1.8);
+  cahaya.position.set(l.x, 3.4, l.z);
+  cahaya.visible = false;
+  scene.add(cahaya);
+  return { ...l, cahaya };
+});
+
+// Lentera Raka: point light hangat mengikuti pemain (hanya menyala saat malam).
+const lentera = new THREE.PointLight(0xffb347, 2.2, 11, 1.8);
+lentera.position.set(0, 1.7, 0.8);
+lentera.visible = false;
+player.group.add(lentera);
+
+const malam = createMalam();
+const dialog = createDialog();
+const dialogEl = document.getElementById('dialog');
+dialogEl.addEventListener('click', () => {
+  if (dialog.tekan()) renderDialog(dialogEl, dialog);
+});
+const envMalam = { scene, sun, bulan, skyU, lampu: lampu3D, lentera };
+
+// Rumah Raka = rumah-w2 (warga pulang saat malam; hanya Raka yang berkeliaran).
+const RUMAH_RAKA = spots.rumah.find((r) => r.id === 'rumah-w2').pos;
+
+function terapkanFase() {
+  terapkanFaseMalam(envMalam, malam);
+  for (const v of villagers) v.group.visible = malam.fase !== FASE.MALAM;
+}
 
 // ================= NPC =================
 const WARNA_BAJU = [0xc25e5e, 0x5e8fc2, 0x6fbf5a, 0xc2a15e, 0x9b6fc2, 0x5ec2b8];
@@ -285,6 +323,19 @@ const bukaPapan = () => tampilDialogMisi(overlay, board.daftar, (id) => {
 // interaksi() mengeksekusi.
 function cariInteraksi() {
   const p = player.pos;
+  // Malam: warga sudah pulang — hanya lampu jalan & tidur yang bisa diakses.
+  if (malam.fase === FASE.MALAM) {
+    if (dekat(p, RUMAH_RAKA)) return { label: 'Tidur', jalan: tidur };
+    const li = lampu3D.findIndex((l) => dekat(p, l, 3));
+    if (li >= 0) {
+      const nyala = malam.lampuNyala(li);
+      return {
+        label: nyala ? 'Padamkan lampu jalan' : 'Nyalakan lampu jalan',
+        jalan: () => toggleLampu(li),
+      };
+    }
+    return null;
+  }
   // 1. Layani pembeli di kasir (prioritas saat toko buka).
   if (day.fase === 'buka' && dekat(p, spots.toko.kasir)) {
     const antre = villagers
@@ -345,6 +396,10 @@ function transisiHari(lap) {
 }
 
 function toggleToko() {
+  if (malam.fase === FASE.MALAM) {
+    notif('Malam hari toko tutup. Pulanglah dan tidur (E).');
+    return;
+  }
   if (day.fase === 'buka') {
     disperseQueue(villagers);
     const lap = day.close();
@@ -356,7 +411,7 @@ function toggleToko() {
     board.resetHarian();
     cekAchievement();
     simpan();
-    transisiHari(lap);
+    masukMalam(lap);
   } else {
     day.open();
     dibukaHariIni = true;
@@ -364,6 +419,51 @@ function toggleToko() {
     bunyi('buka');
     notif('Toko buka! Dekati kasir lalu tekan E / AKSI untuk melayani.');
   }
+}
+
+// Malam tiba setelah toko tutup: kabut turun, lampu jalan menyala, warga pulang.
+// Laporan harian baru tampil setelah Raka tidur (transisiHari dipakai ulang).
+let laporanTertunda = null;
+let malamPertama = true;
+
+function masukMalam(lap) {
+  laporanTertunda = lap;
+  fadeKe(fadeEl, true);
+  setTimeout(() => {
+    malam.setFase(FASE.MALAM);
+    malam.nyalakanSemua();
+    malam.isiMinyak();
+    terapkanFase();
+    fadeKe(fadeEl, false);
+    bunyi('lentera');
+    notif('🌙 Malam tiba di Sukarame Mistery. Pulanglah dan tidur (E).');
+    if (malamPertama) {
+      malamPertama = false;
+      dialog.mulai([
+        { pembicara: 'Raka', teks: 'Malam pertama... desa ini sepi sekali.' },
+        { pembicara: 'Raka', teks: 'Lentera ayah masih menyala. Sebaiknya aku cepat pulang.' },
+      ]);
+      renderDialog(dialogEl, dialog);
+    }
+  }, 600);
+}
+
+function tidur() {
+  dialog.tutup();
+  renderDialog(dialogEl, dialog);
+  bunyi('tutup');
+  const lap = laporanTertunda;
+  laporanTertunda = null;
+  malam.setFase(FASE.SIANG);
+  malam.isiMinyak();
+  terapkanFase();
+  if (lap) transisiHari(lap);
+}
+
+function toggleLampu(i) {
+  if (malam.lampuNyala(i)) { malam.padamkanLampu(i); bunyi('padam'); }
+  else { malam.nyalakanLampu(i); bunyi('lentera'); }
+  terapkanFaseMalam(envMalam, malam);
 }
 
 // ================= UI =================
@@ -380,7 +480,9 @@ const promptEl = document.getElementById('prompt');
 let layar = 'judul';
 
 function misiAktif() {
-  return board.daftar.filter((m) => m.diterima && !m.selesai);
+  const daftar = board.daftar.filter((m) => m.diterima && !m.selesai);
+  if (malam.fase === FASE.MALAM) daftar.unshift({ judul: '🌙 Pulang ke rumah dan tidur' });
+  return daftar;
 }
 
 mountHUD(hudWrap, () => S, {
@@ -395,6 +497,7 @@ mountHUD(hudWrap, () => S, {
 
 const sentuhApi = mountSentuh(sentuhWrap, input, () => {
   if (layar !== 'main' || !overlay.hidden) return; // M4: jangan aksi di balik dialog
+  if (dialog.adaBaris) { dialog.tekan(); renderDialog(dialogEl, dialog); return; }
   interaksi();
 });
 
@@ -501,7 +604,10 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (e.code === 'KeyE' && !overlay.hidden) return;
-  if (e.code === 'KeyE') interaksi();
+  if (e.code === 'KeyE') {
+    if (dialog.adaBaris) { dialog.tekan(); renderDialog(dialogEl, dialog); return; }
+    interaksi();
+  }
 });
 window.addEventListener('beforeunload', () => simpan());
 
@@ -527,11 +633,23 @@ const loop = createLoop({
     if (layar !== 'main') return; // jeda / bantuan: dunia berhenti
     player.update(dt, input, colliders);
     updateCamera(camera, player, dt);
-    // Prompt interaksi kontekstual (throttle 200ms).
+    // Dialog: typewriter + render tiap frame.
+    dialog.tick(dt);
+    renderDialog(dialogEl, dialog);
+    // Malam: minyak lentera berkurang + kedip cahaya.
+    if (malam.fase === FASE.MALAM) {
+      if (malam.tick(dt)) {
+        terapkanFaseMalam(envMalam, malam);
+        bunyi('padam');
+        notif('Minyak lentera habis! Cepat pulang sebelum gelap total.');
+      }
+      tickVisualMalam(envMalam, malam, performance.now() / 1000);
+    }
+    // Prompt interaksi kontekstual (throttle 200ms; sembunyi saat dialog aktif).
     promptTimer += dt;
     if (promptTimer > 0.2) {
       promptTimer = 0;
-      const it = cariInteraksi();
+      const it = dialog.adaBaris ? null : cariInteraksi();
       setPrompt(promptEl, it ? it.label : null, SENTUH ? 'AKSI' : 'E');
       sentuhApi.setSiap(!!it);
     }

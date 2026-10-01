@@ -176,7 +176,8 @@ export function buildVillage(scene) {
   tambah(banner('BALAI DESA', 5, 26, 3.2, -20.9));
   collider(26, -24, 8, 6);
 
-  // Lampu jalan di sepanjang jalan utama
+  // Lampu jalan di sepanjang jalan utama (refs diekspos untuk sistem malam)
+  const lampuJalan = [];
   for (const lx of [-24, -8, 8, 24]) {
     const tiang = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 3.4, 8), std(0x3f4753, 0.6));
     tiang.position.set(lx, 1.7, 5.2);
@@ -189,6 +190,7 @@ export function buildVillage(scene) {
     );
     kepala.position.set(lx, 3.55, 5.2);
     tambah(kepala);
+    lampuJalan.push({ x: lx, z: 5.2, kepala });
   }
 
   // Zona larangan untuk vegetasi acak
@@ -352,7 +354,7 @@ export function buildVillage(scene) {
     daunJatuh.instanceMatrix.needsUpdate = true;
   }
 
-  return { colliders, spots, kopdes, tick, efek: { asap: grupAsap, daun: daunJatuh } };
+  return { colliders, spots, kopdes, tick, lampuJalan, efek: { asap: grupAsap, daun: daunJatuh } };
 }
 
 // Banner teks via CanvasTexture (butuh DOM; di node kembalikan mesh polos).
