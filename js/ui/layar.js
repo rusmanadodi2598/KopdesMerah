@@ -6,6 +6,7 @@ export const KONTROL_PC = [
   ['W A S D', 'jalan'],
   ['Shift', 'lari'],
   ['E', 'aksi / interaksi'],
+  ['J', 'buku catatan misteri'],
   ['H', 'bantuan'],
   ['G', 'kualitas grafis'],
   ['M', 'suara on/off'],
@@ -133,4 +134,24 @@ export function kartuHari(el, hari, ms = 1800) {
     el.classList.remove('tampil');
     setTimeout(() => { el.hidden = true; el.innerHTML = ''; }, 400);
   }, ms);
+}
+
+// ---- Kartu episode sinematik (judul / cliffhanger / preview) ----
+// Ditutup manual via sembunyiKartuEpisode (diatur episode manager),
+// klik juga dilewati oleh handler main.js.
+export function tampilKartuEpisode(el, { kicker = '', judul = '', sub = '' }) {
+  el.innerHTML =
+    `<div class="kartu-episode-tengah">` +
+    (kicker ? `<div class="kep-kicker">${kicker}</div>` : '') +
+    (judul ? `<h2>${judul}</h2>` : '') +
+    (sub ? `<p>${sub}</p>` : '') +
+    `<div class="kep-hint">E ▸ lewati</div></div>`;
+  el.hidden = false;
+  requestAnimationFrame(() => el.classList.add('tampil'));
+}
+
+export function sembunyiKartuEpisode(el) {
+  el.classList.remove('tampil');
+  el.hidden = true;
+  el.innerHTML = '';
 }

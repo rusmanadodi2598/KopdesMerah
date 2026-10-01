@@ -20,6 +20,10 @@ Repo: https://github.com/rusmanadodi2598/KopdesMerah
 |---|
 | ![Karakter](docs/screenshots/karakter.png) |
 
+| E01: Kartu Judul | E01: Malam Pertama | E01: Buku Catatan Misteri |
+|---|---|---|
+| ![E01 Kartu](docs/screenshots/e01-kartu.png) | ![E01 Malam](docs/screenshots/e01-malam.png) | ![E01 Jurnal](docs/screenshots/e01-journal.png) |
+
 | Malam: Dialog | Malam: Lentera | Malam: Lampu Padam |
 |---|---|---|
 | ![Malam Dialog](docs/screenshots/malam-dialog.png) | ![Malam](docs/screenshots/malam.png) | ![Lampu Padam](docs/screenshots/malam-lampu-padam.png) |
@@ -34,6 +38,7 @@ Repo: https://github.com/rusmanadodi2598/KopdesMerah
 - Reputasi & 3 level Kopdes — gedung membesar secara fisik tiap naik level
 - Achievement, save/load otomatis via localStorage (aman dari data korup)
 - HUD + dialog + laporan harian berbahasa Indonesia
+- 🌙 **Dua Belas Malam Kabut** (season horor episodik): sistem malam (lampu jalan on/off, lentera + minyak), dialog typewriter, episode manager data-driven, Buku Catatan Misteri (tombol J / 📖) — Episode 1 "Kabut Pertama" bisa dimainkan penuh
 
 ## Cara Menjalankan
 

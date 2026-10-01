@@ -42,6 +42,14 @@ const POLA = {
   tutup: () => nada(640, 320, 0.18, 'sine', 0.15),
   lentera: () => { nada(180, 520, 0.3, 'sine', 0.12); nada(520, 760, 0.25, 'sine', 0.1, 0.12); },
   padam: () => nada(400, 90, 0.4, 'sine', 0.14),
+  // Tawa anak kecil dari dalam kabut: tiga rengekan tinggi menurun, agak seram.
+  tawa: () => {
+    for (let i = 0; i < 3; i++) {
+      const t = i * 0.26;
+      nada(720 - i * 110, 460 - i * 70, 0.2, 'sine', 0.09, t);
+      nada(1090 - i * 160, 700 - i * 110, 0.2, 'triangle', 0.05, t);
+    }
+  },
   klikLampu: () => nada(1200, 900, 0.05, 'square', 0.07),
 };
 

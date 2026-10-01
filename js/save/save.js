@@ -15,6 +15,7 @@ export function defaultState() {
     misiSelesai: [],
     achievement: [],
     streakBuka: 0, // hari buka berturut-turut (untuk achievement buka-7)
+    episode: { selesai: [], aktif: null, petunjuk: [] }, // progres Dua Belas Malam Kabut
   };
 }
 

@@ -17,11 +17,15 @@ import { mountHUD, mountSentuh, tampilDialogMisi, tampilLaporan, formatRupiah } 
 import {
   tampilJudul, sembunyiJudul, tampilBantuan, sembunyiBantuan,
   tampilJeda, sembunyiJeda, toast, setPrompt, fadeKe, kartuHari,
+  tampilKartuEpisode, sembunyiKartuEpisode,
 } from './ui/layar.js';
 import { bunyi, toggleBisu, apakahBisu } from './core/suara.js';
 import { tingkatBerikutnya, bacaKualitas, terapkanKualitas } from './core/kualitas.js';
 import { createMalam, terapkanFaseMalam, tickVisualMalam, FASE } from './core/malam.js';
 import { createDialog, renderDialog } from './ui/dialog.js';
+import { createEpisodeManager } from './episodes/manager.js';
+import { E01 } from './episodes/data/e01.js';
+import { createJournal, renderJournal, sembunyiJournal } from './ui/journal.js';
 
 // Kualitas grafis dibaca awal karena dipakai saat membangun dunia.
 let kualitas = bacaKualitas();
@@ -169,6 +173,100 @@ dialogEl.addEventListener('click', () => {
 });
 const envMalam = { scene, sun, bulan, skyU, lampu: lampu3D, lentera };
 
+// ================= Episode: Dua Belas Malam Kabut =================
+const kartuEpisodeEl = document.getElementById('kartu-episode');
+const journalEl = document.getElementById('journal');
+const journal = createJournal();
+if (!S.episode) S.episode = { selesai: [], aktif: null, petunjuk: [] };
+for (const p of S.episode.petunjuk ?? []) journal.tambah(p.episode, p.judul, p.teks);
+let journalBuka = false;
+let penjualanEpisode = 0;
+
+// Bayangan bertopi caping (cliffhanger E01): humanoid gelap sederhana.
+const siluet = (() => {
+  const g = new THREE.Group();
+  const gelap = new THREE.MeshStandardMaterial({ color: 0x0a0a0f, roughness: 1 });
+  const badan = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.9, 4, 8), gelap);
+  badan.position.y = 1.0;
+  const kepala = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), gelap);
+  kepala.position.y = 1.82;
+  const caping = new THREE.Mesh(
+    new THREE.ConeGeometry(0.45, 0.32, 10),
+    new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 1 }),
+  );
+  caping.position.y = 2.02;
+  g.add(badan, kepala, caping);
+  g.position.set(36, 0, 8);
+  g.rotation.y = -Math.PI / 2; // menghadap barat, ke arah pemain
+  g.visible = false;
+  scene.add(g);
+  return g;
+})();
+const TITIK_SELIDIK = { x: 32, z: 8 };
+
+const ctxEpisode = {
+  // E01: 3 dari 4 lampu padam misterius (indeks 1..3).
+  malamE01() {
+    malam.padamkanLampu(1);
+    malam.padamkanLampu(2);
+    malam.padamkanLampu(3);
+    terapkanFase();
+    bunyi('padam');
+  },
+  spawnSiluet() {
+    siluet.visible = true;
+  },
+  hilangkanSiluet() {
+    siluet.visible = false;
+  },
+  // E01 butuh 3 penjualan: pastikan semua warga mau belanja (tanpa cooldown).
+  jaminPembeli() {
+    for (const v of villagers) {
+      v.shopper = true;
+      v.cooldown = 0;
+    }
+  },
+};
+
+const em = createEpisodeManager({
+  kartu: ({ kicker, judul, sub }) => tampilKartuEpisode(kartuEpisodeEl, { kicker, judul, sub }),
+  tutupKartu: () => sembunyiKartuEpisode(kartuEpisodeEl),
+  dialog: (baris, cb) => {
+    dialog.mulai(baris, () => {
+      renderDialog(dialogEl, dialog);
+      cb();
+    });
+    renderDialog(dialogEl, dialog);
+  },
+  setObjektif: () => {}, // objektif cerita dibaca HUD via em.objektifTeks()
+  jurnal: (epId, judul, teks) => {
+    journal.tambah(epId, judul, teks);
+    S.episode.petunjuk.push({ episode: epId, judul, teks });
+    simpan();
+    bunyi('sukses');
+    notif(`📖 Petunjuk baru: ${judul} (buka dengan J)`);
+  },
+  suara: (nama) => bunyi(nama),
+  selesai: (def) => {
+    if (!S.episode.selesai.includes(def.id)) S.episode.selesai.push(def.id);
+    S.episode.aktif = null;
+    simpan();
+    bunyi('sukses');
+    notif(`🎬 Episode ${def.nomor} "${def.judul}" selesai! Tekan J untuk baca ulang petunjuk.`);
+  },
+});
+kartuEpisodeEl.addEventListener('click', () => em.lewatiKartu());
+
+function toggleJournal() {
+  journalBuka = !journalBuka;
+  if (journalBuka) {
+    bunyi('klik');
+    renderJournal(journalEl, journal);
+  } else {
+    sembunyiJournal(journalEl);
+  }
+}
+
 // Rumah Raka = rumah-w2 (warga pulang saat malam; hanya Raka yang berkeliaran).
 const RUMAH_RAKA = spots.rumah.find((r) => r.id === 'rumah-w2').pos;
 
@@ -267,6 +365,10 @@ function jualKe() {
   S.uang += r.total;
   day.recordSale(r.total, nilaiModal(cart));
   simpan();
+  // Hook episode E01: hitung penjualan selama episode berjalan.
+  penjualanEpisode += 1;
+  if (penjualanEpisode === 2) em.tandaiSelesai('layani-2');
+  else if (penjualanEpisode === 3) em.tandaiSelesai('layani-1');
 }
 
 // Gudang: ambil barang untuk misi antar yang diterima; kalau tidak ada
@@ -415,6 +517,7 @@ function toggleToko() {
   } else {
     day.open();
     dibukaHariIni = true;
+    em.tandaiSelesai('buka-toko');
     simpan();
     bunyi('buka');
     notif('Toko buka! Dekati kasir lalu tekan E / AKSI untuk melayani.');
@@ -434,11 +537,16 @@ function masukMalam(lap) {
     malam.nyalakanSemua();
     malam.isiMinyak();
     terapkanFase();
+    // Setelah lampu dinyalakan: tandai objektif tutup-toko. Bila E01 aktif,
+    // beat berikutnya (kartu-malam) memadamkan 3 lampu via onStart.
+    em.tandaiSelesai('tutup-toko');
     fadeKe(fadeEl, false);
     bunyi('lentera');
     notif('🌙 Malam tiba di Sukarame Mistery. Pulanglah dan tidur (E).');
-    if (malamPertama) {
-      malamPertama = false;
+    // Dialog intro generik hanya bila tak ada episode aktif (episode punya beat sendiri).
+    const introGenerik = malamPertama && !em.aktif;
+    malamPertama = false;
+    if (introGenerik) {
       dialog.mulai([
         { pembicara: 'Raka', teks: 'Malam pertama... desa ini sepi sekali.' },
         { pembicara: 'Raka', teks: 'Lentera ayah masih menyala. Sebaiknya aku cepat pulang.' },
@@ -464,6 +572,8 @@ function toggleLampu(i) {
   if (malam.lampuNyala(i)) { malam.padamkanLampu(i); bunyi('padam'); }
   else { malam.nyalakanLampu(i); bunyi('lentera'); }
   terapkanFaseMalam(envMalam, malam);
+  // Hook episode E01: semua lampu menyala lagi.
+  if (malam.jumlahLampuPadam() === 0) em.tandaiSelesai('nyalakan-3');
 }
 
 // ================= UI =================
@@ -481,7 +591,10 @@ let layar = 'judul';
 
 function misiAktif() {
   const daftar = board.daftar.filter((m) => m.diterima && !m.selesai);
-  if (malam.fase === FASE.MALAM) daftar.unshift({ judul: '🌙 Pulang ke rumah dan tidur' });
+  // Objektif cerita episode diprioritaskan di atas objektif malam generik.
+  const ep = em.objektifTeks();
+  if (ep) daftar.unshift({ judul: `🎬 ${ep}` });
+  else if (malam.fase === FASE.MALAM) daftar.unshift({ judul: '🌙 Pulang ke rumah dan tidur' });
   return daftar;
 }
 
@@ -493,11 +606,13 @@ mountHUD(hudWrap, () => S, {
     if (laporanTerakhir) tampilLaporan(overlay, laporanTerakhir, () => {});
     else notif('Belum ada laporan hari ini.');
   },
+  onJurnal: () => toggleJournal(),
 }, misiAktif);
 
 const sentuhApi = mountSentuh(sentuhWrap, input, () => {
   if (layar !== 'main' || !overlay.hidden) return; // M4: jangan aksi di balik dialog
   if (dialog.adaBaris) { dialog.tekan(); renderDialog(dialogEl, dialog); return; }
+  if (em.kartuAktif) { em.lewatiKartu(); return; }
   interaksi();
 });
 
@@ -516,6 +631,13 @@ function mulaiMain() {
   camera.position.set(player.pos.x, 3.5, player.pos.z + 6);
   camera.lookAt(player.pos.x, 1.2, player.pos.z);
   notif('Selamat datang di Kopdes! Tekan H untuk bantuan.');
+  // Auto-mulai E01 bila belum selesai (resume sederhana: dari awal episode).
+  if (!S.episode.selesai.includes('e01') && !em.aktif) {
+    S.episode.aktif = 'e01';
+    penjualanEpisode = 0;
+    simpan();
+    em.mulai(E01, ctxEpisode);
+  }
 }
 
 function keJudul() {
@@ -578,6 +700,7 @@ function pilihJeda(pilih) {
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape') {
+    if (journalBuka) { toggleJournal(); return; }
     if (layar === 'main') bukaJeda();
     else if (layar === 'jeda') tutupJeda();
     else if (layar === 'bantuan') {
@@ -603,9 +726,11 @@ window.addEventListener('keydown', (e) => {
     notif(b ? 'Suara dimatikan (M untuk menyalakan).' : 'Suara dinyalakan.');
     return;
   }
+  if (e.code === 'KeyJ' && overlay.hidden) { toggleJournal(); return; }
   if (e.code === 'KeyE' && !overlay.hidden) return;
   if (e.code === 'KeyE') {
     if (dialog.adaBaris) { dialog.tekan(); renderDialog(dialogEl, dialog); return; }
+    if (em.kartuAktif) { em.lewatiKartu(); return; }
     interaksi();
   }
 });
@@ -636,6 +761,11 @@ const loop = createLoop({
     // Dialog: typewriter + render tiap frame.
     dialog.tick(dt);
     renderDialog(dialogEl, dialog);
+    // Episode: timer kartu/tunggu + trigger posisi cerita.
+    em.tick(dt);
+    if (em.beatId === 'selidiki' && dekat(player.pos, TITIK_SELIDIK, 6)) {
+      em.tandaiSelesai('selidiki');
+    }
     // Malam: minyak lentera berkurang + kedip cahaya.
     if (malam.fase === FASE.MALAM) {
       if (malam.tick(dt)) {

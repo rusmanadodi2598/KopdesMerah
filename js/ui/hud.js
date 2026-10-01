@@ -24,7 +24,7 @@ export function hudModel(state, misiAktif = []) {
 }
 
 // hudEl: #hud. getState: () => state. getMisi: () => daftar misi aktif.
-// aksi: { onToggleToko, onMisi, onLapor }.
+// aksi: { onToggleToko, onMisi, onLapor, onJurnal }.
 // Me-render bar + tombol + tracker objektif, refresh tiap 250ms.
 export function mountHUD(hudEl, getState, aksi = {}, getMisi = () => []) {
   hudEl.innerHTML = `
@@ -39,6 +39,7 @@ export function mountHUD(hudEl, getState, aksi = {}, getMisi = () => []) {
       <button id="btn-toko" type="button"></button>
       <button id="btn-misi" type="button">Misi</button>
       <button id="btn-lapor" type="button">Laporan</button>
+      <button id="btn-jurnal" type="button">📖</button>
     </div>`;
   const elHari = hudEl.querySelector('#hud-hari');
   const elUang = hudEl.querySelector('#hud-uang');
@@ -48,6 +49,7 @@ export function mountHUD(hudEl, getState, aksi = {}, getMisi = () => []) {
   const btnToko = hudEl.querySelector('#btn-toko');
   const btnMisi = hudEl.querySelector('#btn-misi');
   const btnLapor = hudEl.querySelector('#btn-lapor');
+  const btnJurnal = hudEl.querySelector('#btn-jurnal');
 
   function render() {
     const m = hudModel(getState(), getMisi());
@@ -63,6 +65,7 @@ export function mountHUD(hudEl, getState, aksi = {}, getMisi = () => []) {
   btnToko.addEventListener('click', () => aksi.onToggleToko?.());
   btnMisi.addEventListener('click', () => aksi.onMisi?.());
   btnLapor.addEventListener('click', () => aksi.onLapor?.());
+  btnJurnal.addEventListener('click', () => aksi.onJurnal?.());
 
   render();
   const timer = setInterval(render, 250);
