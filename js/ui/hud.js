@@ -11,19 +11,22 @@ export function formatRupiah(n) {
   return (bulat < 0 ? '-Rp' : 'Rp') + grup.join('.');
 }
 
-export function hudModel(state) {
+export function hudModel(state, misiAktif = []) {
   return {
     uang: formatRupiah(state.uang ?? 0),
     hari: state.hari ?? 1,
     reputasi: state.reputasi ?? 0,
     level: state.level ?? 1,
     fase: state.fase ?? 'pagi',
+    objektif: misiAktif.slice(0, 2).map((m) =>
+      m.aksi ? `🎯 ${m.judul} ${m.progres}/${m.target}` : `🎯 ${m.judul}`),
   };
 }
 
-// hudEl: #hud. getState: () => state. aksi: { onToggleToko, onMisi, onLapor }.
-// Me-render bar + tombol, refresh tiap 250ms. Kembalikan { render, destroy }.
-export function mountHUD(hudEl, getState, aksi = {}) {
+// hudEl: #hud. getState: () => state. getMisi: () => daftar misi aktif.
+// aksi: { onToggleToko, onMisi, onLapor }.
+// Me-render bar + tombol + tracker objektif, refresh tiap 250ms.
+export function mountHUD(hudEl, getState, aksi = {}, getMisi = () => []) {
   hudEl.innerHTML = `
     <div class="hud-bar">
       <span id="hud-hari"></span>
@@ -31,6 +34,7 @@ export function mountHUD(hudEl, getState, aksi = {}) {
       <span id="hud-rep"></span>
       <span id="hud-level"></span>
     </div>
+    <div id="hud-objektif"></div>
     <div class="hud-tombol">
       <button id="btn-toko" type="button"></button>
       <button id="btn-misi" type="button">Misi</button>
@@ -40,16 +44,19 @@ export function mountHUD(hudEl, getState, aksi = {}) {
   const elUang = hudEl.querySelector('#hud-uang');
   const elRep = hudEl.querySelector('#hud-rep');
   const elLevel = hudEl.querySelector('#hud-level');
+  const elObj = hudEl.querySelector('#hud-objektif');
   const btnToko = hudEl.querySelector('#btn-toko');
   const btnMisi = hudEl.querySelector('#btn-misi');
   const btnLapor = hudEl.querySelector('#btn-lapor');
 
   function render() {
-    const m = hudModel(getState());
+    const m = hudModel(getState(), getMisi());
     elHari.textContent = `📅 Hari ${m.hari}`;
     elUang.textContent = `💰 ${m.uang}`;
     elRep.textContent = `⭐ ${m.reputasi}`;
     elLevel.textContent = `🏪 Lv ${m.level}`;
+    elObj.innerHTML = m.objektif.map((t) => `<div>${t}</div>`).join('');
+    elObj.hidden = m.objektif.length === 0;
     btnToko.textContent = m.fase === 'buka' ? 'Tutup Toko' : 'Buka Toko';
   }
 
@@ -112,6 +119,9 @@ export function mountSentuh(sentuhEl, input, onAksi) {
   btnAksi.addEventListener('click', () => {
     if (Date.now() - aksiTerakhir > 500) onAksi?.();
   });
+
+  // Nyalakan glow saat ada interaksi tersedia (ala tombol Tangan Hutan Kabut).
+  return { setSiap(siap) { btnAksi.classList.toggle('siap', !!siap); } };
 }
 
 // Ikon tile per misi dari kata kunci judul (murni, bisa diuji).

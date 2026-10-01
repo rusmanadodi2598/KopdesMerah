@@ -114,6 +114,8 @@ export function buildVillage(scene) {
 
   // Asap cerobong: sprite lembut yang naik, membesar, memudar (butuh DOM).
   const asap = [];
+  const grupAsap = new THREE.Group();
+  tambah(grupAsap);
   if (typeof document !== 'undefined') {
     const c = document.createElement('canvas');
     c.width = c.height = 64;
@@ -130,7 +132,7 @@ export function buildVillage(scene) {
           map: texAsap, transparent: true, opacity: 0.3, depthWrite: false,
         }));
         s.userData = { cx: r.x + 1.5, cy: 5.4, cz: r.z - 0.8, t: Math.random() };
-        tambah(s);
+        grupAsap.add(s);
         asap.push(s);
       }
     }
@@ -350,7 +352,7 @@ export function buildVillage(scene) {
     daunJatuh.instanceMatrix.needsUpdate = true;
   }
 
-  return { colliders, spots, kopdes, tick };
+  return { colliders, spots, kopdes, tick, efek: { asap: grupAsap, daun: daunJatuh } };
 }
 
 // Banner teks via CanvasTexture (butuh DOM; di node kembalikan mesh polos).

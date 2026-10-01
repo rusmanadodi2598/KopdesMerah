@@ -14,6 +14,17 @@ import { levelUntuk, barangTerbuka, reputasiKepuasan } from './progression/level
 import { defaultState, saveGame, loadGame, hasSave } from './save/save.js';
 import { sinkronState } from './save/sync.js';
 import { mountHUD, mountSentuh, tampilDialogMisi, tampilLaporan, formatRupiah } from './ui/hud.js';
+import {
+  tampilJudul, sembunyiJudul, tampilBantuan, sembunyiBantuan,
+  tampilJeda, sembunyiJeda, toast, setPrompt, fadeKe, kartuHari,
+} from './ui/layar.js';
+import { bunyi, toggleBisu, apakahBisu } from './core/suara.js';
+import { tingkatBerikutnya, bacaKualitas, terapkanKualitas } from './core/kualitas.js';
+
+// Kualitas grafis dibaca awal karena dipakai saat membangun dunia.
+let kualitas = bacaKualitas();
+
+// ================= Three.js dasar =================
 
 // ================= State =================
 const S = loadGame();
@@ -102,7 +113,8 @@ scene.add(sun.target);
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
 camera.position.set(2, 3.5, 14);
 
-const { colliders, spots, kopdes: kopdesAwal, tick: tickDesa } = buildVillage(scene);
+const { colliders, spots, kopdes: kopdesAwal, tick: tickDesa, efek } = buildVillage(scene);
+terapkanKualitas({ renderer, scene, efek }, kualitas);
 let kopdesGroup = kopdesAwal;
 
 // Naik level: tukar gedung + sinkronkan collider (I2).
@@ -141,16 +153,10 @@ const villagers = KUMPUL.map((t, i) => {
   return v;
 });
 
-// ================= Notifikasi =================
-const notifEl = document.createElement('div');
-notifEl.id = 'notif';
-document.body.appendChild(notifEl);
-let notifTimer = 0;
+// ================= Notifikasi (toast bertumpuk) =================
+const toastEl = document.getElementById('toast');
 function notif(teks, ms = 2600) {
-  notifEl.textContent = teks;
-  notifEl.classList.add('tampil');
-  clearTimeout(notifTimer);
-  notifTimer = setTimeout(() => notifEl.classList.remove('tampil'), ms);
+  toast(toastEl, teks, ms);
 }
 
 // ================= Aturan main =================
@@ -177,6 +183,7 @@ function cekAchievement() {
 }
 
 function beriHadiah(id, upah, reputasi) {
+  bunyi('sukses');
   S.uang += upah;
   S.misiSelesai.push(id);
   beriReputasi(reputasi);
@@ -187,7 +194,7 @@ function beriHadiah(id, upah, reputasi) {
 
 function selesaikanMisiAntar(id) {
   const r = board.complete(id, inventory);
-  if (!r.ok) { notif(r.pesan); return; }
+  if (!r.ok) { bunyi('gagal'); notif(r.pesan); return; }
   if (id === 'restok-gula') {
     // Barang misi masuk rak toko.
     const m = MISSIONS.find((x) => x.id === id);
@@ -218,6 +225,7 @@ function jualKe() {
   txCounter += 1;
   const r = kasir.checkout(cart, `tx-${Date.now()}-${txCounter}`, stock);
   if (!r.ok) return;
+  bunyi('koin');
   S.uang += r.total;
   day.recordSale(r.total, nilaiModal(cart));
   simpan();
@@ -267,47 +275,73 @@ function tujuanPos(tujuan) {
 }
 
 const bukaPapan = () => tampilDialogMisi(overlay, board.daftar, (id) => {
+  bunyi('klik');
   board.accept(id);
-  notif('Misi diambil! Cek papan untuk detail.');
+  notif('Misi diambil! Lihat tracker di kiri atas.');
   bukaPapan();
 });
 
-// Interaksi kontekstual (tombol E / AKSI).
-function interaksi() {
+// Interaksi kontekstual: cariInteraksi() murni-mencari (untuk prompt HUD),
+// interaksi() mengeksekusi.
+function cariInteraksi() {
   const p = player.pos;
   // 1. Layani pembeli di kasir (prioritas saat toko buka).
   if (day.fase === 'buka' && dekat(p, spots.toko.kasir)) {
     const antre = villagers
       .filter((v) => v.state === 'queue')
       .sort((a, b) => a.queueSlot - b.queueSlot);
-    if (antre.length > 0) { layani(antre[0]); return; }
+    if (antre.length > 0) return { label: 'Layani pembeli', jalan: () => layani(antre[0]) };
+    return { label: 'Kasir', jalan: () => notif('Belum ada pembeli mengantre.') };
   }
   // 2. Papan misi.
-  if (dekat(p, spots.papanMisi)) { bukaPapan(); return; }
+  if (dekat(p, spots.papanMisi)) return { label: 'Buka papan misi', jalan: bukaPapan };
   // 3. Gudang: ambil barang misi / pesan stok.
-  if (dekat(p, spots.gudang)) { aksiGudang(); return; }
+  if (dekat(p, spots.gudang)) return { label: 'Ambil barang / pesan stok', jalan: aksiGudang };
   // 4. Sawah: panen singkong.
-  if (dekat(p, spots.sawah, 6)) {
-    const r = board.progress('panen-singkong', { panen: true });
-    if (r.selesai) beriHadiah('panen-singkong', r.upah, r.reputasi);
-    else notif('Memanen singkong...');
-    return;
-  }
+  if (dekat(p, spots.sawah, 6)) return { label: 'Panen singkong', jalan: aksiSawah };
   // 5. Tujuan misi antar (dicek sebelum kunjungan rumah agar tidak tertelan).
   const misi = board.daftar.find((m) => {
     if (!m.diterima || m.selesai || m.aksi) return false;
     const t = tujuanPos(m.tujuan);
     return t && dekat(p, t);
   });
-  if (misi) { selesaikanMisiAntar(misi.id); return; }
+  if (misi) return { label: `Antar ke ${misi.tujuan}`, jalan: () => selesaikanMisiAntar(misi.id) };
   // 6. Rumah warga: tagih iuran (tiap E di dekat rumah = 1 kunjungan).
-  if (spots.rumah.some((r) => dekat(p, r.pos))) {
-    const r = board.progress('tagih-iuran', { kunjungan: true });
-    if (r.selesai) beriHadiah('tagih-iuran', r.upah, r.reputasi);
-    else notif('Menagih iuran...');
-    return;
-  }
-  notif('Tidak ada yang bisa dilakukan di sini.');
+  if (spots.rumah.some((r) => dekat(p, r.pos))) return { label: 'Tagih iuran', jalan: aksiTagih };
+  return null;
+}
+
+function aksiSawah() {
+  const r = board.progress('panen-singkong', { panen: true });
+  if (r.selesai) beriHadiah('panen-singkong', r.upah, r.reputasi);
+  else notif('Memanen singkong...');
+}
+
+function aksiTagih() {
+  const r = board.progress('tagih-iuran', { kunjungan: true });
+  if (r.selesai) beriHadiah('tagih-iuran', r.upah, r.reputasi);
+  else notif('Menagih iuran...');
+}
+
+function interaksi() {
+  const it = cariInteraksi();
+  if (it) it.jalan();
+  else notif('Tidak ada yang bisa dilakukan di sini.');
+}
+
+// Transisi tutup hari: fade → kartu "Hari N" → laporan (ala fade Hutan Kabut).
+const fadeEl = document.getElementById('fade');
+const kartuEl = document.getElementById('kartu-hari');
+function transisiHari(lap) {
+  bunyi('tutup');
+  fadeKe(fadeEl, true);
+  setTimeout(() => {
+    kartuHari(kartuEl, day.hari);
+    setTimeout(() => {
+      fadeKe(fadeEl, false);
+      tampilLaporan(overlay, lap, () => simpan());
+    }, 2100);
+  }, 550);
 }
 
 function toggleToko() {
@@ -322,29 +356,150 @@ function toggleToko() {
     board.resetHarian();
     cekAchievement();
     simpan();
-    tampilLaporan(overlay, lap, () => simpan());
+    transisiHari(lap);
   } else {
     day.open();
     dibukaHariIni = true;
     simpan();
+    bunyi('buka');
     notif('Toko buka! Dekati kasir lalu tekan E / AKSI untuk melayani.');
   }
 }
 
 // ================= UI =================
-mountHUD(document.getElementById('hud'), () => S, {
-  onToggleToko: toggleToko,
-  onMisi: () => bukaPapan(),
+const SENTUH = (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches)
+  || (typeof window !== 'undefined' && 'ontouchstart' in window);
+const hudWrap = document.getElementById('hud');
+const sentuhWrap = document.getElementById('sentuh');
+const judulEl = document.getElementById('judul');
+const bantuanEl = document.getElementById('bantuan');
+const jedaEl = document.getElementById('jeda');
+const promptEl = document.getElementById('prompt');
+
+// State layar: judul → main ⇄ jeda ⇄ bantuan. Loop update hanya jalan di 'main'.
+let layar = 'judul';
+
+function misiAktif() {
+  return board.daftar.filter((m) => m.diterima && !m.selesai);
+}
+
+mountHUD(hudWrap, () => S, {
+  onToggleToko: () => { bunyi('klik'); toggleToko(); },
+  onMisi: () => { bunyi('klik'); bukaPapan(); },
   onLapor: () => {
+    bunyi('klik');
     if (laporanTerakhir) tampilLaporan(overlay, laporanTerakhir, () => {});
     else notif('Belum ada laporan hari ini.');
   },
-});
-mountSentuh(document.getElementById('sentuh'), input, () => {
-  if (!overlay.hidden) return; // M4: jangan aksi di balik dialog
+}, misiAktif);
+
+const sentuhApi = mountSentuh(sentuhWrap, input, () => {
+  if (layar !== 'main' || !overlay.hidden) return; // M4: jangan aksi di balik dialog
   interaksi();
 });
+
+function aturVisibilitasHUD() {
+  const diJudul = layar === 'judul';
+  hudWrap.hidden = diJudul;
+  sentuhWrap.hidden = diJudul;
+}
+
+function mulaiMain() {
+  bunyi('klik');
+  sembunyiJudul(judulEl);
+  layar = 'main';
+  aturVisibilitasHUD();
+  // Snap kamera ke belakang pemain (hindari lerp jauh dari orbit judul).
+  camera.position.set(player.pos.x, 3.5, player.pos.z + 6);
+  camera.lookAt(player.pos.x, 1.2, player.pos.z);
+  notif('Selamat datang di Kopdes! Tekan H untuk bantuan.');
+}
+
+function keJudul() {
+  layar = 'judul';
+  aturVisibilitasHUD();
+  tampilJudul(judulEl, { onMulai: mulaiMain, sentuh: SENTUH });
+}
+
+function bukaJeda() {
+  if (layar !== 'main') return;
+  bunyi('klik');
+  layar = 'jeda';
+  tampilJeda(jedaEl, {
+    kualitas,
+    bisu: apakahBisu(),
+    onPilih: pilihJeda,
+  });
+}
+
+function tutupJeda() {
+  sembunyiJeda(jedaEl);
+  layar = 'main';
+}
+
+let kembaliBantuan = null;
+function bukaBantuan(kembali) {
+  kembaliBantuan = kembali ?? (() => { layar = 'main'; });
+  layar = 'bantuan';
+  tampilBantuan(bantuanEl, {
+    sentuh: SENTUH,
+    onTutup: () => {
+      const k = kembaliBantuan;
+      kembaliBantuan = null;
+      k?.();
+    },
+  });
+}
+
+function pilihJeda(pilih) {
+  bunyi('klik');
+  if (pilih === 'lanjut') tutupJeda();
+  else if (pilih === 'bantuan') { sembunyiJeda(jedaEl); bukaBantuan(bukaJeda); }
+  else if (pilih === 'kualitas') {
+    kualitas = tingkatBerikutnya(kualitas);
+    terapkanKualitas({ renderer, scene, efek }, kualitas);
+    notif(`Kualitas grafis: ${kualitas}`);
+    bukaJeda();
+  } else if (pilih === 'suara') {
+    const b = toggleBisu();
+    notif(b ? 'Suara dimatikan.' : 'Suara dinyalakan.');
+    if (layar === 'jeda') bukaJeda();
+  } else if (pilih === 'judul') { sembunyiJeda(jedaEl); keJudul(); }
+  else if (pilih === 'baru') {
+    if (confirm('Hapus simpanan dan mulai dari awal?')) {
+      localStorage.removeItem('kopdes3d_save_v1');
+      location.reload();
+    }
+  }
+}
+
 window.addEventListener('keydown', (e) => {
+  if (e.code === 'Escape') {
+    if (layar === 'main') bukaJeda();
+    else if (layar === 'jeda') tutupJeda();
+    else if (layar === 'bantuan') {
+      sembunyiBantuan(bantuanEl);
+      const k = kembaliBantuan;
+      kembaliBantuan = null;
+      k?.();
+    }
+    return;
+  }
+  if (layar !== 'main') return;
+  if (e.code === 'KeyH') { bukaBantuan(); return; }
+  if (e.code === 'KeyG') {
+    bunyi('klik');
+    kualitas = tingkatBerikutnya(kualitas);
+    terapkanKualitas({ renderer, scene, efek }, kualitas);
+    notif(`Kualitas grafis: ${kualitas}`);
+    return;
+  }
+  if (e.code === 'KeyM') {
+    const b = toggleBisu();
+    bunyi('klik');
+    notif(b ? 'Suara dimatikan (M untuk menyalakan).' : 'Suara dinyalakan.');
+    return;
+  }
   if (e.code === 'KeyE' && !overlay.hidden) return;
   if (e.code === 'KeyE') interaksi();
 });
@@ -357,10 +512,29 @@ window.addEventListener('resize', () => {
 });
 
 // ================= Loop =================
+let sudutJudul = 0;
+let promptTimer = 0;
 const loop = createLoop({
   update(dt) {
+    // Layar judul: kamera mengorbit desa sebagai latar sinematik.
+    if (layar === 'judul') {
+      sudutJudul += dt * 0.07;
+      camera.position.set(Math.sin(sudutJudul) * 30, 11, Math.cos(sudutJudul) * 30);
+      camera.lookAt(0, 2, 0);
+      tickDesa?.(dt);
+      return;
+    }
+    if (layar !== 'main') return; // jeda / bantuan: dunia berhenti
     player.update(dt, input, colliders);
     updateCamera(camera, player, dt);
+    // Prompt interaksi kontekstual (throttle 200ms).
+    promptTimer += dt;
+    if (promptTimer > 0.2) {
+      promptTimer = 0;
+      const it = cariInteraksi();
+      setPrompt(promptEl, it ? it.label : null, SENTUH ? 'AKSI' : 'E');
+      sentuhApi.setSiap(!!it);
+    }
     const shopOpen = day.fase === 'buka';
     const ctx = { shopOpen, queueSpots: spots.toko.antre, villagers, serveId: serveTarget };
     for (const v of villagers) {
@@ -375,4 +549,5 @@ const loop = createLoop({
   },
   render() { renderer.render(scene, camera); },
 });
+keJudul();
 loop.start();
