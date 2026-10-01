@@ -9,16 +9,7 @@ const RADIUS = 0.4;
 const _targetKamera = new THREE.Vector3();
 
 function bangunMesh() {
-  const { group, rig, ayun } = bangunTubuh({ baju: 0x2b6cb0 });
-  // Topi merah khas Kopdes (ikut rig agar bergoyang saat jalan)
-  const std = (warna) => new THREE.MeshStandardMaterial({ color: warna, roughness: 0.8, metalness: 0 });
-  const topi = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.28, 0.16, 12), std(0xc8102e));
-  topi.position.y = 1.82;
-  topi.castShadow = true;
-  rig.add(topi);
-  const lidah = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.04, 12, 1, false, 0, Math.PI), std(0xc8102e));
-  lidah.position.set(0, 1.76, 0.14);
-  rig.add(lidah);
+  const { group, ayun } = bangunTubuh({ baju: 0x2b6cb0, topiKopdes: true });
   group.userData.ayun = ayun;
   return group;
 }

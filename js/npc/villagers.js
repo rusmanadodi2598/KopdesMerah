@@ -106,9 +106,25 @@ export function disperseQueue(villagers) {
   }
 }
 
-// Visual low-poly, terpisah dari brain.
+// Visual semi-realistis, terpisah dari brain. Variasi acak: warna kulit,
+// rambut / hijab, celana, sepatu — biar tiap warga terlihat beda.
+const KULIT = [0xf2c89b, 0xe0ac72, 0xc68850, 0xa06a3c];
+const RAMBUT = [0x23272f, 0x3b2a20, 0x6b4a2f, 0x8a8f98];
+const HIJAB = [0xd9a7b0, 0x9db8d9, 0xb8d9a7, 0xe8d9a7, 0xc7b8e0, null, null, null];
+const CELANA = [0x3a4a5a, 0x2f3b2f, 0x5a4a3a, 0x4a4a5a, 0x333333];
+const SEPATU = [0x2b2b30, 0x5a3a2a, 0xe8e8e8, 0x3a3a3a];
+const acak = (arr) => arr[(Math.random() * arr.length) | 0];
+
 export function villagerMesh(warnaBaju = 0xc25e5e) {
-  const { group, ayun } = bangunTubuh({ baju: warnaBaju, kepalaR: 0.24 });
+  const { group, ayun } = bangunTubuh({
+    baju: warnaBaju,
+    kulit: acak(KULIT),
+    celana: acak(CELANA),
+    sepatu: acak(SEPATU),
+    rambut: acak(RAMBUT),
+    hijab: acak(HIJAB),
+    kepalaR: 0.19,
+  });
   group.userData.ayun = ayun;
   return group;
 }
