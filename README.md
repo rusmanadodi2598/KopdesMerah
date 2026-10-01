@@ -12,6 +12,10 @@ Repo: https://github.com/rusmanadodi2598/KopdesMerah
 |---|---|---|---|
 | ![Desa](docs/screenshots/desa.png) | ![Papan Misi](docs/screenshots/papan-misi.png) | ![Toko Buka](docs/screenshots/toko-buka.png) | ![Mobile](docs/screenshots/mobile.png) |
 
+| Layar Judul | Prompt & Objektif | AKSI Menyala (HP) |
+|---|---|---|
+| ![Judul](docs/screenshots/ux-judul.png) | ![Gameplay](docs/screenshots/ux-gameplay.png) | ![Mobile UX](docs/screenshots/ux-mobile.png) |
+
 ## Fitur
 
 - Desa 3D siang yang cozy: rumah warga, sawah, balai desa, papan misi, gudang
